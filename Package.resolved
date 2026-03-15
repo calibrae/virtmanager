@@ -1,0 +1,24 @@
+{
+  "originHash" : "de2be1683df846f6f1dee3e6062160979eb81a70c7562693ebe5966a15da7d3c",
+  "pins" : [
+    {
+      "identity" : "swift-argument-parser",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/apple/swift-argument-parser",
+      "state" : {
+        "revision" : "c5d11a805e765f52ba34ec7284bd4fcd6ba68615",
+        "version" : "1.7.0"
+      }
+    },
+    {
+      "identity" : "swiftterm",
+      "kind" : "remoteSourceControl",
+      "location" : "https://github.com/migueldeicaza/SwiftTerm",
+      "state" : {
+        "revision" : "3c45fdcfcf4395c72d2a4ee23c0bce79017b5391",
+        "version" : "1.12.0"
+      }
+    }
+  ],
+  "version" : 3
+}

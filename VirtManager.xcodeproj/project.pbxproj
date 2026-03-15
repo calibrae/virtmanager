@@ -1,0 +1,496 @@
+// !$*UTF8*$!
+{
+	archiveVersion = 1;
+	classes = {
+	};
+	objectVersion = 77;
+	objects = {
+
+/* Begin PBXBuildFile section */
+		65AC1DE804DD67F107AF266C /* VirtManagerUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE8058FA90C8638A219C3B1 /* VirtManagerUITests.swift */; };
+		CDAC9532D135DF4A42986E44 /* AppEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F4C6A94B34E020F753591C /* AppEntry.swift */; };
+		E18D208FA321B2F99E053032 /* Helpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A99A6200EBDCF3E7891D10 /* Helpers.swift */; };
+		FF0BDD8D21B1AF3F2E208681 /* VirtManager in Frameworks */ = {isa = PBXBuildFile; productRef = 9B464BB45DB020D7DB7C2907 /* VirtManager */; };
+/* End PBXBuildFile section */
+
+/* Begin PBXContainerItemProxy section */
+		36DA1E392FD518BA1EF5D7CF /* PBXContainerItemProxy */ = {
+			isa = PBXContainerItemProxy;
+			containerPortal = C540F98C4E284A3A0848F80D /* Project object */;
+			proxyType = 1;
+			remoteGlobalIDString = 978C68D20C357197C71B761A;
+			remoteInfo = VirtManagerApp;
+		};
+/* End PBXContainerItemProxy section */
+
+/* Begin PBXFileReference section */
+		05F4C6A94B34E020F753591C /* AppEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEntry.swift; sourceTree = "<group>"; };
+		6AE8058FA90C8638A219C3B1 /* VirtManagerUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtManagerUITests.swift; sourceTree = "<group>"; };
+		BAB1E75623B1200E08916D4C /* virtmanager */ = {isa = PBXFileReference; lastKnownFileType = folder; name = virtmanager; path = .; sourceTree = SOURCE_ROOT; };
+		D5A99A6200EBDCF3E7891D10 /* Helpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Helpers.swift; sourceTree = "<group>"; };
+		DE58F8722E9F008FD21DCA69 /* VirtManagerApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VirtManagerApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
+		F64F51B80EF736743EB187FB /* VirtManagerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VirtManagerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+/* End PBXFileReference section */
+
+/* Begin PBXFrameworksBuildPhase section */
+		10934D9BE2F7B42DACD08060 /* Frameworks */ = {
+			isa = PBXFrameworksBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				FF0BDD8D21B1AF3F2E208681 /* VirtManager in Frameworks */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXFrameworksBuildPhase section */
+
+/* Begin PBXGroup section */
+		042D494650897BD634D4DBA8 /* Products */ = {
+			isa = PBXGroup;
+			children = (
+				DE58F8722E9F008FD21DCA69 /* VirtManagerApp.app */,
+				F64F51B80EF736743EB187FB /* VirtManagerUITests.xctest */,
+			);
+			name = Products;
+			sourceTree = "<group>";
+		};
+		2284E374043A4CC8A44A50CD /* XcodeSupport */ = {
+			isa = PBXGroup;
+			children = (
+				05F4C6A94B34E020F753591C /* AppEntry.swift */,
+			);
+			path = XcodeSupport;
+			sourceTree = "<group>";
+		};
+		44BBA1DF9C9CB8B81F7E93C0 /* Packages */ = {
+			isa = PBXGroup;
+			children = (
+				BAB1E75623B1200E08916D4C /* virtmanager */,
+			);
+			name = Packages;
+			sourceTree = "<group>";
+		};
+		73A7E2E8C8E59BA5E284168B = {
+			isa = PBXGroup;
+			children = (
+				44BBA1DF9C9CB8B81F7E93C0 /* Packages */,
+				77D050ABAB5CD0EF34DAE82C /* UITests */,
+				2284E374043A4CC8A44A50CD /* XcodeSupport */,
+				042D494650897BD634D4DBA8 /* Products */,
+			);
+			sourceTree = "<group>";
+		};
+		77D050ABAB5CD0EF34DAE82C /* UITests */ = {
+			isa = PBXGroup;
+			children = (
+				D5A99A6200EBDCF3E7891D10 /* Helpers.swift */,
+				6AE8058FA90C8638A219C3B1 /* VirtManagerUITests.swift */,
+			);
+			name = UITests;
+			path = Tests/UITests;
+			sourceTree = "<group>";
+		};
+/* End PBXGroup section */
+
+/* Begin PBXNativeTarget section */
+		899693732925E28E5ECFE77B /* VirtManagerUITests */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = CBBE65D0B238D99ADA9AD514 /* Build configuration list for PBXNativeTarget "VirtManagerUITests" */;
+			buildPhases = (
+				0628980C8C1CAF87C9C7EF1D /* Sources */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+				7534A4E946C6BEA8C3FB610F /* PBXTargetDependency */,
+			);
+			name = VirtManagerUITests;
+			packageProductDependencies = (
+			);
+			productName = VirtManagerUITests;
+			productReference = F64F51B80EF736743EB187FB /* VirtManagerUITests.xctest */;
+			productType = "com.apple.product-type.bundle.ui-testing";
+		};
+		978C68D20C357197C71B761A /* VirtManagerApp */ = {
+			isa = PBXNativeTarget;
+			buildConfigurationList = 361A18A196C6BCED6D38271F /* Build configuration list for PBXNativeTarget "VirtManagerApp" */;
+			buildPhases = (
+				5D6AAC6E62BE3B980C6A299F /* Sources */,
+				10934D9BE2F7B42DACD08060 /* Frameworks */,
+			);
+			buildRules = (
+			);
+			dependencies = (
+			);
+			name = VirtManagerApp;
+			packageProductDependencies = (
+				9B464BB45DB020D7DB7C2907 /* VirtManager */,
+			);
+			productName = VirtManagerApp;
+			productReference = DE58F8722E9F008FD21DCA69 /* VirtManagerApp.app */;
+			productType = "com.apple.product-type.application";
+		};
+/* End PBXNativeTarget section */
+
+/* Begin PBXProject section */
+		C540F98C4E284A3A0848F80D /* Project object */ = {
+			isa = PBXProject;
+			attributes = {
+				BuildIndependentTargetsInParallel = YES;
+				LastUpgradeCheck = 1600;
+				TargetAttributes = {
+					899693732925E28E5ECFE77B = {
+						TestTargetID = 978C68D20C357197C71B761A;
+					};
+				};
+			};
+			buildConfigurationList = 86EB7E61C6BD759848F20826 /* Build configuration list for PBXProject "VirtManager" */;
+			developmentRegion = en;
+			hasScannedForEncodings = 0;
+			knownRegions = (
+				Base,
+				en,
+			);
+			mainGroup = 73A7E2E8C8E59BA5E284168B;
+			minimizedProjectReferenceProxies = 1;
+			packageReferences = (
+				004552F71E96BAF638B48505 /* XCLocalSwiftPackageReference "." */,
+			);
+			preferredProjectObjectVersion = 77;
+			productRefGroup = 042D494650897BD634D4DBA8 /* Products */;
+			projectDirPath = "";
+			projectRoot = "";
+			targets = (
+				978C68D20C357197C71B761A /* VirtManagerApp */,
+				899693732925E28E5ECFE77B /* VirtManagerUITests */,
+			);
+		};
+/* End PBXProject section */
+
+/* Begin PBXSourcesBuildPhase section */
+		0628980C8C1CAF87C9C7EF1D /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				E18D208FA321B2F99E053032 /* Helpers.swift in Sources */,
+				65AC1DE804DD67F107AF266C /* VirtManagerUITests.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+		5D6AAC6E62BE3B980C6A299F /* Sources */ = {
+			isa = PBXSourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				CDAC9532D135DF4A42986E44 /* AppEntry.swift in Sources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXSourcesBuildPhase section */
+
+/* Begin PBXTargetDependency section */
+		7534A4E946C6BEA8C3FB610F /* PBXTargetDependency */ = {
+			isa = PBXTargetDependency;
+			target = 978C68D20C357197C71B761A /* VirtManagerApp */;
+			targetProxy = 36DA1E392FD518BA1EF5D7CF /* PBXContainerItemProxy */;
+		};
+/* End PBXTargetDependency section */
+
+/* Begin XCBuildConfiguration section */
+		42350F1E88F5D3435B1CE553 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = "dwarf-with-dsym";
+				ENABLE_NS_ASSERTIONS = NO;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = NO;
+				MTL_FAST_MATH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_COMPILATION_MODE = wholemodule;
+				SWIFT_OPTIMIZATION_LEVEL = "-O";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Release;
+		};
+		749D4DEABFF3C36F08400D7B /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.virtmanager.uitests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5;
+				TEST_TARGET_NAME = VirtManagerApp;
+			};
+			name = Release;
+		};
+		7BCAC80D13B9C823D81401B4 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/VirtManager/Resources/VirtManager.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/homebrew/opt/libvirt/include,
+					"/opt/homebrew/opt/spice-gtk/include/spice-client-glib-2.0",
+					"/opt/homebrew/opt/glib/include/glib-2.0",
+					"/opt/homebrew/opt/glib/lib/glib-2.0/include",
+					"/opt/homebrew/opt/spice-protocol/include/spice-1",
+					"/opt/homebrew/opt/pixman/include/pixman-1",
+					"/opt/homebrew/opt/openssl@3/include",
+					"/opt/homebrew/opt/json-glib/include/json-glib-1.0",
+					"/opt/homebrew/opt/libsoup/include/libsoup-3.0",
+					"/opt/homebrew/opt/glib/include/gio-unix-2.0",
+				);
+				INFOPLIST_FILE = Sources/VirtManager/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/homebrew/opt/libvirt/lib,
+					"/opt/homebrew/opt/spice-gtk/lib",
+					/opt/homebrew/opt/glib/lib,
+					/opt/homebrew/opt/gettext/lib,
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lvirt",
+					"-lspice-client-glib-2.0",
+					"-lgio-2.0",
+					"-lgobject-2.0",
+					"-lglib-2.0",
+					"-lintl",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.virtmanager.app;
+				PRODUCT_MODULE_NAME = VirtManagerApp;
+				PRODUCT_NAME = VirtManager;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited)";
+			};
+			name = Debug;
+		};
+		87D130CEED97508A5A3DD715 /* Release */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
+				CODE_SIGN_ENTITLEMENTS = Sources/VirtManager/Resources/VirtManager.entitlements;
+				COMBINE_HIDPI_IMAGES = YES;
+				HEADER_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/homebrew/opt/libvirt/include,
+					"/opt/homebrew/opt/spice-gtk/include/spice-client-glib-2.0",
+					"/opt/homebrew/opt/glib/include/glib-2.0",
+					"/opt/homebrew/opt/glib/lib/glib-2.0/include",
+					"/opt/homebrew/opt/spice-protocol/include/spice-1",
+					"/opt/homebrew/opt/pixman/include/pixman-1",
+					"/opt/homebrew/opt/openssl@3/include",
+					"/opt/homebrew/opt/json-glib/include/json-glib-1.0",
+					"/opt/homebrew/opt/libsoup/include/libsoup-3.0",
+					"/opt/homebrew/opt/glib/include/gio-unix-2.0",
+				);
+				INFOPLIST_FILE = Sources/VirtManager/Resources/Info.plist;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/../Frameworks",
+				);
+				LIBRARY_SEARCH_PATHS = (
+					"$(inherited)",
+					/opt/homebrew/opt/libvirt/lib,
+					"/opt/homebrew/opt/spice-gtk/lib",
+					/opt/homebrew/opt/glib/lib,
+					/opt/homebrew/opt/gettext/lib,
+				);
+				OTHER_LDFLAGS = (
+					"$(inherited)",
+					"-lvirt",
+					"-lspice-client-glib-2.0",
+					"-lgio-2.0",
+					"-lgobject-2.0",
+					"-lglib-2.0",
+					"-lintl",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.virtmanager.app;
+				PRODUCT_MODULE_NAME = VirtManagerApp;
+				PRODUCT_NAME = VirtManager;
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = "$(inherited)";
+			};
+			name = Release;
+		};
+		A23AC5836F6825F4EB99FB14 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				BUNDLE_LOADER = "$(TEST_HOST)";
+				COMBINE_HIDPI_IMAGES = YES;
+				GENERATE_INFOPLIST_FILE = YES;
+				LD_RUNPATH_SEARCH_PATHS = (
+					"$(inherited)",
+					"@executable_path/Frameworks",
+					"@loader_path/Frameworks",
+				);
+				PRODUCT_BUNDLE_IDENTIFIER = com.virtmanager.uitests;
+				SDKROOT = macosx;
+				SWIFT_VERSION = 5;
+				TEST_TARGET_NAME = VirtManagerApp;
+			};
+			name = Debug;
+		};
+		FA1224EA3B4D5695A5802D83 /* Debug */ = {
+			isa = XCBuildConfiguration;
+			buildSettings = {
+				ALWAYS_SEARCH_USER_PATHS = NO;
+				CLANG_ANALYZER_NONNULL = YES;
+				CLANG_ANALYZER_NUMBER_OBJECT_CONVERSION = YES_AGGRESSIVE;
+				CLANG_CXX_LANGUAGE_STANDARD = "gnu++14";
+				CLANG_CXX_LIBRARY = "libc++";
+				CLANG_ENABLE_MODULES = YES;
+				CLANG_ENABLE_OBJC_ARC = YES;
+				CLANG_ENABLE_OBJC_WEAK = YES;
+				CLANG_WARN_BLOCK_CAPTURE_AUTORELEASING = YES;
+				CLANG_WARN_BOOL_CONVERSION = YES;
+				CLANG_WARN_COMMA = YES;
+				CLANG_WARN_CONSTANT_CONVERSION = YES;
+				CLANG_WARN_DEPRECATED_OBJC_IMPLEMENTATIONS = YES;
+				CLANG_WARN_DIRECT_OBJC_ISA_USAGE = YES_ERROR;
+				CLANG_WARN_DOCUMENTATION_COMMENTS = YES;
+				CLANG_WARN_EMPTY_BODY = YES;
+				CLANG_WARN_ENUM_CONVERSION = YES;
+				CLANG_WARN_INFINITE_RECURSION = YES;
+				CLANG_WARN_INT_CONVERSION = YES;
+				CLANG_WARN_NON_LITERAL_NULL_CONVERSION = YES;
+				CLANG_WARN_OBJC_IMPLICIT_RETAIN_SELF = YES;
+				CLANG_WARN_OBJC_LITERAL_CONVERSION = YES;
+				CLANG_WARN_OBJC_ROOT_CLASS = YES_ERROR;
+				CLANG_WARN_QUOTED_INCLUDE_IN_FRAMEWORK_HEADER = YES;
+				CLANG_WARN_RANGE_LOOP_ANALYSIS = YES;
+				CLANG_WARN_STRICT_PROTOTYPES = YES;
+				CLANG_WARN_SUSPICIOUS_MOVE = YES;
+				CLANG_WARN_UNGUARDED_AVAILABILITY = YES_AGGRESSIVE;
+				CLANG_WARN_UNREACHABLE_CODE = YES;
+				CLANG_WARN__DUPLICATE_METHOD_MATCH = YES;
+				COPY_PHASE_STRIP = NO;
+				DEBUG_INFORMATION_FORMAT = dwarf;
+				ENABLE_STRICT_OBJC_MSGSEND = YES;
+				ENABLE_TESTABILITY = YES;
+				GCC_C_LANGUAGE_STANDARD = gnu11;
+				GCC_DYNAMIC_NO_PIC = NO;
+				GCC_NO_COMMON_BLOCKS = YES;
+				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					"$(inherited)",
+					"DEBUG=1",
+				);
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
+				GCC_WARN_ABOUT_RETURN_TYPE = YES_ERROR;
+				GCC_WARN_UNDECLARED_SELECTOR = YES;
+				GCC_WARN_UNINITIALIZED_AUTOS = YES_AGGRESSIVE;
+				GCC_WARN_UNUSED_FUNCTION = YES;
+				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 14.0;
+				MTL_ENABLE_DEBUG_INFO = INCLUDE_SOURCE;
+				MTL_FAST_MATH = YES;
+				ONLY_ACTIVE_ARCH = YES;
+				PRODUCT_NAME = "$(TARGET_NAME)";
+				SDKROOT = macosx;
+				SWIFT_ACTIVE_COMPILATION_CONDITIONS = DEBUG;
+				SWIFT_OPTIMIZATION_LEVEL = "-Onone";
+				SWIFT_VERSION = 6.0;
+			};
+			name = Debug;
+		};
+/* End XCBuildConfiguration section */
+
+/* Begin XCConfigurationList section */
+		361A18A196C6BCED6D38271F /* Build configuration list for PBXNativeTarget "VirtManagerApp" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				7BCAC80D13B9C823D81401B4 /* Debug */,
+				87D130CEED97508A5A3DD715 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		86EB7E61C6BD759848F20826 /* Build configuration list for PBXProject "VirtManager" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				FA1224EA3B4D5695A5802D83 /* Debug */,
+				42350F1E88F5D3435B1CE553 /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+		CBBE65D0B238D99ADA9AD514 /* Build configuration list for PBXNativeTarget "VirtManagerUITests" */ = {
+			isa = XCConfigurationList;
+			buildConfigurations = (
+				A23AC5836F6825F4EB99FB14 /* Debug */,
+				749D4DEABFF3C36F08400D7B /* Release */,
+			);
+			defaultConfigurationIsVisible = 0;
+			defaultConfigurationName = Debug;
+		};
+/* End XCConfigurationList section */
+
+/* Begin XCLocalSwiftPackageReference section */
+		004552F71E96BAF638B48505 /* XCLocalSwiftPackageReference "." */ = {
+			isa = XCLocalSwiftPackageReference;
+			relativePath = .;
+		};
+/* End XCLocalSwiftPackageReference section */
+
+/* Begin XCSwiftPackageProductDependency section */
+		9B464BB45DB020D7DB7C2907 /* VirtManager */ = {
+			isa = XCSwiftPackageProductDependency;
+			productName = VirtManager;
+		};
+/* End XCSwiftPackageProductDependency section */
+	};
+	rootObject = C540F98C4E284A3A0848F80D /* Project object */;
+}

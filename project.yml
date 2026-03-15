@@ -1,0 +1,72 @@
+name: VirtManager
+options:
+  bundleIdPrefix: com.virtmanager
+  deploymentTarget:
+    macOS: "14.0"
+  xcodeVersion: "16.0"
+
+packages:
+  VirtManager:
+    path: .
+
+settings:
+  base:
+    SWIFT_VERSION: "6.0"
+
+targets:
+  VirtManagerApp:
+    type: application
+    platform: macOS
+    sources:
+      - path: XcodeSupport
+    dependencies:
+      - package: VirtManager
+        product: VirtManager
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.virtmanager.app
+        PRODUCT_NAME: VirtManager
+        PRODUCT_MODULE_NAME: VirtManagerApp
+        INFOPLIST_FILE: Sources/VirtManager/Resources/Info.plist
+        CODE_SIGN_ENTITLEMENTS: Sources/VirtManager/Resources/VirtManager.entitlements
+        HEADER_SEARCH_PATHS:
+          - "$(inherited)"
+          - "/opt/homebrew/opt/libvirt/include"
+          - "/opt/homebrew/opt/spice-gtk/include/spice-client-glib-2.0"
+          - "/opt/homebrew/opt/glib/include/glib-2.0"
+          - "/opt/homebrew/opt/glib/lib/glib-2.0/include"
+          - "/opt/homebrew/opt/spice-protocol/include/spice-1"
+          - "/opt/homebrew/opt/pixman/include/pixman-1"
+          - "/opt/homebrew/opt/openssl@3/include"
+          - "/opt/homebrew/opt/json-glib/include/json-glib-1.0"
+          - "/opt/homebrew/opt/libsoup/include/libsoup-3.0"
+          - "/opt/homebrew/opt/glib/include/gio-unix-2.0"
+        LIBRARY_SEARCH_PATHS:
+          - "$(inherited)"
+          - "/opt/homebrew/opt/libvirt/lib"
+          - "/opt/homebrew/opt/spice-gtk/lib"
+          - "/opt/homebrew/opt/glib/lib"
+          - "/opt/homebrew/opt/gettext/lib"
+        OTHER_LDFLAGS:
+          - "$(inherited)"
+          - "-lvirt"
+          - "-lspice-client-glib-2.0"
+          - "-lgio-2.0"
+          - "-lgobject-2.0"
+          - "-lglib-2.0"
+          - "-lintl"
+        SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited)"
+
+  VirtManagerUITests:
+    type: bundle.ui-testing
+    platform: macOS
+    sources:
+      - path: Tests/UITests
+    dependencies:
+      - target: VirtManagerApp
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.virtmanager.uitests
+        TEST_TARGET_NAME: VirtManagerApp
+        GENERATE_INFOPLIST_FILE: YES
+        SWIFT_VERSION: "5"
