@@ -1,0 +1,13 @@
+.DS_Store
+.build/
+DerivedData/
+*.xcodeproj/xcuserdata/
+*.xcodeproj/project.xcworkspace/xcuserdata/
+xcuserdata/
+*.swp
+*.swo
+*~
+.env
+.claude/
+_bmad/
+_bmad-output/
