@@ -89,6 +89,15 @@ public struct SidebarView: View {
             Button("Refresh VMs") {
                 appState.refreshVMs(for: connection.id)
             }
+
+            Divider()
+
+            Button("Manage Storage Pools...") {
+                WindowManager.shared.openStorageManager(connectionID: connection.id, appState: appState)
+            }
+            Button("Manage Networks...") {
+                WindowManager.shared.openNetworkManager(connectionID: connection.id, appState: appState)
+            }
         } else if state == .connecting || state == .disconnecting {
             // No connect/disconnect actions while transitioning
         } else {

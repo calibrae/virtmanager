@@ -12,7 +12,7 @@ public struct ConnectionSheet: View {
     }
 
     @State private var displayName = ""
-    @State private var uri = "qemu+ssh://cali@jolyne/system"
+    @State private var uri = "qemu+ssh://user@hostname/system"
     @State private var authType: SavedConnection.AuthType = .sshAgent
 
     private var isEditing: Bool { existingConnection != nil }

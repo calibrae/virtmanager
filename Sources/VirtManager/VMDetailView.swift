@@ -21,6 +21,7 @@ public struct VMDetailView: View {
                 VStack(alignment: .leading, spacing: 20) {
                     infoSection
                     actionsSection
+                    configurationSection
                     consoleSection
                 }
                 .padding()
@@ -119,6 +120,23 @@ public struct VMDetailView: View {
                     }
                 }
 
+                Spacer()
+            }
+            .padding(.vertical, 4)
+        }
+    }
+
+    private var configurationSection: some View {
+        GroupBox("Configuration") {
+            HStack(spacing: 12) {
+                actionButton("Configuration", systemImage: "gearshape", color: .accentColor) {
+                    if let connID = appState.connectionID(for: vm.id) {
+                        appState.openConfiguration(for: vm, connectionID: connID)
+                    }
+                }
+                Text("Edit VM hardware and settings")
+                    .foregroundStyle(.secondary)
+                    .font(.callout)
                 Spacer()
             }
             .padding(.vertical, 4)
