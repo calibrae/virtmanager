@@ -1,0 +1,166 @@
+name: Release
+
+on:
+  push:
+    tags:
+      - 'v*'
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release
+  cancel-in-progress: false
+
+jobs:
+  build-and-release:
+    runs-on: self-hosted
+    timeout-minutes: 30
+    env:
+      PATH: /opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+      PKG_CONFIG_PATH: /opt/homebrew/lib/pkgconfig:/opt/homebrew/share/pkgconfig
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify dependencies
+        run: |
+          xcodebuild -version
+          which xcodegen || brew install xcodegen
+
+      - name: Resolve SPM dependencies
+        run: swift package resolve
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Setup signing
+        env:
+          BUILD_CERTIFICATE_BASE64: ${{ secrets.BUILD_CERTIFICATE_BASE64 }}
+          P12_PASSWORD: ${{ secrets.P12_PASSWORD }}
+          ASC_KEY_P8: ${{ secrets.ASC_KEY_P8 }}
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          KEYCHAIN_PASSWORD: ${{ github.run_id }}
+        run: |
+          KEYCHAIN_PATH="${RUNNER_TEMP}/build.keychain-db"
+          CERT_PATH="${RUNNER_TEMP}/certificate.p12"
+
+          echo -n "$BUILD_CERTIFICATE_BASE64" | base64 --decode -o "$CERT_PATH"
+
+          security create-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+          security set-keychain-settings -lut 21600 "$KEYCHAIN_PATH"
+          security unlock-keychain -p "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          security import "$CERT_PATH" -P "$P12_PASSWORD" -A -t cert -f pkcs12 \
+            -k "$KEYCHAIN_PATH"
+          security set-key-partition-list -S apple-tool:,apple: \
+            -k "$KEYCHAIN_PASSWORD" "$KEYCHAIN_PATH"
+
+          security list-keychains -d user -s "$KEYCHAIN_PATH" login.keychain-db
+
+          mkdir -p ~/.private_keys
+          echo -n "$ASC_KEY_P8" > ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8
+
+      - name: Build release
+        run: |
+          # Build without signing first (SPM targets can't be signed)
+          xcodebuild build \
+            -project VirtManager.xcodeproj \
+            -scheme VirtManagerApp \
+            -destination 'platform=macOS' \
+            -configuration Release \
+            -derivedDataPath build/DerivedData \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            -quiet
+
+      - name: Bundle dylibs
+        run: |
+          APP_PATH="build/DerivedData/Build/Products/Release/VirtManager.app"
+          bash scripts/bundle-dylibs.sh "$APP_PATH"
+
+      - name: Sign app
+        env:
+          KEYCHAIN_PASSWORD: ${{ github.run_id }}
+        run: |
+          APP_PATH="build/DerivedData/Build/Products/Release/VirtManager.app"
+
+          # Copy icon if missing
+          if [ ! -f "$APP_PATH/Contents/Resources/AppIcon.icns" ]; then
+            cp Sources/VirtManager/Resources/AppIcon.icns "$APP_PATH/Contents/Resources/"
+          fi
+
+          # Ensure CFBundleIconFile is set
+          /usr/libexec/PlistBuddy -c "Set :CFBundleIconFile AppIcon" "$APP_PATH/Contents/Info.plist" 2>/dev/null || \
+          /usr/libexec/PlistBuddy -c "Add :CFBundleIconFile string AppIcon" "$APP_PATH/Contents/Info.plist"
+
+          # Sign each bundled dylib first
+          for dylib in "$APP_PATH/Contents/Frameworks/"*.dylib; do
+            codesign --force \
+              --sign "Developer ID Application" \
+              --keychain "${RUNNER_TEMP}/build.keychain-db" \
+              --options runtime \
+              "$dylib"
+          done
+
+          # Then sign the app bundle
+          codesign --force --deep \
+            --sign "Developer ID Application" \
+            --keychain "${RUNNER_TEMP}/build.keychain-db" \
+            --options runtime \
+            --entitlements Sources/VirtManager/Resources/VirtManager.entitlements \
+            "$APP_PATH"
+
+          codesign -v "$APP_PATH"
+
+      - name: Create DMG
+        run: |
+          APP_PATH="build/DerivedData/Build/Products/Release/VirtManager.app"
+          DMG_PATH="build/VirtManager-${GITHUB_REF_NAME}.dmg"
+
+          # Create DMG with Applications symlink
+          mkdir -p build/dmg
+          cp -R "$APP_PATH" build/dmg/
+          ln -s /Applications build/dmg/Applications
+
+          hdiutil create -volname "VirtManager" \
+            -srcfolder build/dmg \
+            -ov -format UDZO \
+            "$DMG_PATH"
+
+          echo "DMG_PATH=$DMG_PATH" >> $GITHUB_ENV
+
+      - name: Notarize
+        env:
+          ASC_KEY_ID: ${{ secrets.ASC_KEY_ID }}
+          ASC_ISSUER_ID: ${{ secrets.ASC_ISSUER_ID }}
+        run: |
+          xcrun notarytool submit "$DMG_PATH" \
+            --key ~/.private_keys/AuthKey_${ASC_KEY_ID}.p8 \
+            --key-id "$ASC_KEY_ID" \
+            --issuer "$ASC_ISSUER_ID" \
+            --wait --timeout 10m
+
+          xcrun stapler staple "$DMG_PATH"
+
+      - name: Run tests before release
+        run: |
+          swift test --filter VirtManagerCoreTests
+        continue-on-error: false
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          gh release create "$GITHUB_REF_NAME" \
+            --title "VirtManager $GITHUB_REF_NAME" \
+            --generate-notes \
+            "$DMG_PATH"
+
+      - name: Cleanup
+        if: always()
+        run: |
+          security delete-keychain "${RUNNER_TEMP}/build.keychain-db" 2>/dev/null || true
+          rm -f ~/.private_keys/AuthKey_*.p8 "${RUNNER_TEMP}/certificate.p12"
+          rm -rf build/

@@ -5,18 +5,32 @@ A native macOS application for managing remote virtual machines via [libvirt](ht
 ![macOS 14+](https://img.shields.io/badge/macOS-14%2B-blue)
 ![Swift 6](https://img.shields.io/badge/Swift-6.0-orange)
 ![License](https://img.shields.io/badge/license-MIT-green)
+![CI](https://github.com/calibrae/virtmanager/actions/workflows/ci.yml/badge.svg)
+![Tests](https://img.shields.io/badge/tests-53%20passing-brightgreen)
+![OWASP](https://img.shields.io/badge/OWASP-24%2F26%20fixed-blue)
+
+## Install
+
+**Download the latest DMG from [Releases](https://github.com/calibrae/virtmanager/releases/latest)**, open it, and drag VirtManager to Applications. No Homebrew or dependencies needed — everything is bundled.
 
 ## Features
 
 - **Connect to remote hypervisors** via `qemu+ssh://` with SSH key or agent authentication
-- **List and manage VMs** — see all VMs with state indicators (running, paused, shut off, crashed)
+- **List and manage VMs** — state indicators (running, paused, shut off, crashed), search/filter
 - **VM lifecycle control** — start, shutdown, force off, pause, resume, reboot with confirmation dialogs
-- **VNC console** — full graphical console with keyboard/mouse support via custom RFB 3.8 protocol client
-- **SPICE console** — graphical console via spice-client-glib with keyboard/mouse forwarding
-- **Serial console** — full terminal emulator via [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm) connected to libvirt console streams
+- **VNC console** — full graphical console with keyboard/mouse via custom RFB 3.8 protocol client
+- **SPICE console** — graphical console via spice-client-glib with keyboard/mouse, USB redirection
+- **Serial console** — full VT100/xterm terminal emulator via [SwiftTerm](https://github.com/migueldeicaza/SwiftTerm)
+- **USB device redirection** — forward Mac USB devices to SPICE VMs, share ISOs as virtual USB CD-ROM
+- **VM configuration editor** — GUI tabs (CPU, memory, disks, network, boot) + raw XML editor with validation
+- **VM creation wizard** — 6-step wizard with OS variant defaults
+- **ISO management** — upload from Mac via SCP, browse remote filesystem, CDROM attach/eject
+- **Storage & network management** — create/delete/manage storage pools and virtual networks
 - **Multiple connections** — manage VMs across several hypervisors simultaneously
-- **Native macOS UI** — SwiftUI sidebar + detail layout, dark mode, Retina display support
-- **Preferences** — configurable connection defaults, console behavior, keyboard shortcuts
+- **Auto-refresh** — VM states update every 5 seconds
+- **SSH host key verification** — warns on unknown or changed host keys
+- **Keyboard grab** — CGEvent tap captures all keys including Cmd+Tab (Ctrl+Alt to release)
+- **Native macOS UI** — SwiftUI sidebar + detail, dark mode, Retina, preferences
 
 ## Screenshots
 
@@ -26,154 +40,79 @@ A native macOS application for managing remote virtual machines via [libvirt](ht
 
 - macOS 14 (Sonoma) or later
 - Apple Silicon or Intel Mac
-- [Homebrew](https://brew.sh/) dependencies:
+- SSH access to a libvirt hypervisor (KVM/QEMU)
+
+**No Homebrew required** — all libraries (libvirt, spice-gtk, glib, openssl, etc.) are bundled in the app.
+
+## Building from Source
+
+For development, you'll need Homebrew dependencies:
 
 ```bash
-brew install libvirt spice-gtk pkg-config
-```
-
-## Building
-
-### From Source (SPM)
-
-```bash
-git clone https://github.com/your-org/virtmanager.git
+brew install libvirt spice-gtk pkg-config xcodegen
+git clone https://github.com/calibrae/virtmanager.git
 cd virtmanager
-swift build
+swift build           # SPM library build
+xcodegen generate     # Generate Xcode project
+bash run.sh           # Build and launch via Xcode
 ```
-
-### Xcode
-
-Open the project in Xcode (the `VirtManager.xcodeproj` wraps the SPM package):
-
-```bash
-xcodebuild build -project VirtManager.xcodeproj -scheme VirtManagerApp -destination 'platform=macOS'
-```
-
-### Run
-
-```bash
-bash run.sh
-```
-
-This builds via Xcode and launches the `.app` bundle.
 
 ## Architecture
 
-The project is organized as a Swift Package with modular targets:
-
 ```
 Sources/
-├── CLibvirt/           # System library wrapper for libvirt C API
-├── CSpice/             # System library wrapper for spice-client-glib
-├── LibvirtSwift/       # Swift wrapper: connection, domain ops, streams, XML parsing
-├── VirtManagerCore/    # Shared models, errors, credential store, logging
-├── VNCClient/          # Custom RFB 3.8 protocol client (pure Swift)
-├── SpiceClient/        # SPICE client via spice-client-glib (GLib bridge)
-└── VirtManager/        # SwiftUI app: views, console windows, preferences
-    └── Windows/
-        └── ConsoleWindow/  # VNC, SPICE, and serial console view controllers
-
-XcodeSupport/           # Thin @main entry point for Xcode app target
-Tests/
-├── VirtManagerCoreTests/   # Unit tests (models, state, Codable)
-├── IntegrationTests/       # Integration tests against live hypervisor
-└── UITests/                # XCUITest suite
+├── CLibvirt/              # System library wrapper for libvirt C API
+├── CSpice/                # System library wrapper for spice-client-glib
+├── LibvirtSwift/          # Swift wrapper: connection, domains, streams, storage, XML parsing
+│   └── DomainConfig/      # Domain XML parser, device models, validation engine
+├── VirtManagerCore/       # Shared models, errors, credential store, logging
+├── VNCClient/             # Custom RFB 3.8 protocol client (pure Swift)
+├── SpiceClient/           # SPICE client: GLib bridge, display, input, USB manager
+└── VirtManager/           # SwiftUI app
+    ├── Configuration/     # VM config editor (9 tab views + XML editor)
+    ├── Creation/          # VM creation wizard (6 steps)
+    ├── Management/        # Storage pool & network managers
+    ├── Storage/           # ISO browser, remote filesystem browser
+    ├── USB/               # USB device redirection view
+    └── Windows/ConsoleWindow/  # VNC, SPICE, serial console views
 ```
 
 ### Key Technical Decisions
 
 | Decision | Choice | Rationale |
 |----------|--------|-----------|
-| UI Framework | SwiftUI + AppKit | SwiftUI for main window, AppKit for console views needing low-level control |
-| libvirt binding | C API via Swift interop | Direct, no wrapper library needed; blocking calls dispatched to background threads |
-| VNC protocol | Custom Swift RFB 3.8 | Simple protocol, avoids C dependency; supports Raw + CopyRect encodings |
-| SPICE protocol | spice-client-glib | Too complex to reimplement; GLib main loop on dedicated thread |
-| Serial console | SwiftTerm | Full VT100/xterm terminal emulator; handles all escape sequences |
-| Console rendering | Core Graphics (CGImage) | Simple and correct; Metal upgrade path available |
-| Keyboard capture | NSEvent monitoring | Per-window keyboard forwarding; CGEvent taps for future global grab |
-| Credential storage | macOS Keychain | Platform standard; never stored in plaintext |
-| Concurrency | Swift structured concurrency + GCD | Blocking libvirt calls on GCD; async/await for UI coordination |
+| UI | SwiftUI + AppKit | SwiftUI for main window, AppKit for console views |
+| libvirt | C API via Swift interop | Blocking calls on GCD (not Swift async — crashes cooperative pool) |
+| VNC | Custom Swift RFB 3.8 | Pure Swift, no C dependency, Network.framework transport |
+| SPICE | spice-client-glib | GLib main loop on dedicated thread, `g_main_context_acquire` + polling |
+| Serial | SwiftTerm | Full VT100/xterm emulator, blocking libvirt stream on dedicated thread |
+| Console rendering | Core Graphics | CGImage from surface data, dirty-rect repainting |
+| Credentials | macOS Keychain | Never stored in plaintext |
+| ISO upload | SCP subprocess | 10-100x faster than libvirt streams over SSH |
 
 ## Testing
 
-### Unit Tests
-
 ```bash
-swift test --filter VirtManagerCoreTests
+swift test                                          # Unit + integration tests
+xcodebuild test -project VirtManager.xcodeproj \
+  -scheme VirtManagerUITests -destination 'platform=macOS'  # 14 XCUITests
 ```
 
-### Integration Tests
+## CI/CD
 
-Requires a reachable libvirt hypervisor (configured for `jolyne` in tests):
+- **CI** — On push/PR: SPM build, unit tests, integration tests, Xcode build, XCUITests
+- **Release** — On tag (`v*`): build, bundle 40 dylibs, code sign, create DMG, notarize, GitHub Release
+- **Security** — Weekly: dependency audit, SSH/XML/credential scans
 
-```bash
-swift test --filter IntegrationTests
-```
+All workflows run on a self-hosted macOS runner.
 
-### UI Tests (XCUITest)
+## Security & Stats
 
-Requires the Xcode project and a reachable hypervisor:
-
-```bash
-xcodebuild test -project VirtManager.xcodeproj -scheme VirtManagerUITests -destination 'platform=macOS'
-```
-
-**14 UI tests** covering: app launch, connection flow, VM discovery, VM detail, console buttons, VNC console window opening.
-
-## Project Status
-
-### Implemented (MVP)
-
-| Feature | Status |
-|---------|--------|
-| SSH connection to hypervisors | Done |
-| VM listing with state badges | Done |
-| VM lifecycle (start/stop/pause/resume/reboot) | Done |
-| VNC graphical console | Done |
-| SPICE graphical console | Done |
-| Serial console (SwiftTerm) | Done |
-| Connection persistence | Done |
-| Preferences window | Done |
-| Multi-connection support | Done |
-| XCUITest suite | Done |
-
-### Planned (Post-MVP)
-
-- VM creation wizard
-- VM cloning
-- Hardware configuration editing
-- Storage and network management
-- Performance monitoring graphs
-- SPICE clipboard and USB redirection
-- Multi-monitor support
-- Menu bar widget
-
-## Development
-
-### Prerequisites
-
-```bash
-# Install dependencies
-brew install libvirt spice-gtk pkg-config xcodegen
-
-# Resolve SPM dependencies
-swift package resolve
-
-# Generate Xcode project (if needed)
-xcodegen generate
-```
-
-### Project Structure
-
-- `Package.swift` — SPM package definition (library targets)
-- `project.yml` — XcodeGen spec for `.xcodeproj` (app + UI test targets)
-- `run.sh` — Build and launch script
-- `test-ui.sh` — osascript-based UI test runner (alternative to XCUITest)
+OWASP-audited — all Critical and High findings fixed. See **[STATS.md](STATS.md)** for full audit results, test coverage, and codebase metrics.
 
 ## License
 
-MIT
+MIT — see [THIRD_PARTY_LICENSES.md](THIRD_PARTY_LICENSES.md) for bundled library licenses.
 
 ## Acknowledgments
 

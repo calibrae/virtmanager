@@ -7,9 +7,9 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		3F75A084505017D4BCB72315 /* AppIcon.icns in Resources */ = {isa = PBXBuildFile; fileRef = FA8B353D1C1DC0C3F3107E6E /* AppIcon.icns */; };
 		65AC1DE804DD67F107AF266C /* VirtManagerUITests.swift in Sources */ = {isa = PBXBuildFile; fileRef = 6AE8058FA90C8638A219C3B1 /* VirtManagerUITests.swift */; };
 		CDAC9532D135DF4A42986E44 /* AppEntry.swift in Sources */ = {isa = PBXBuildFile; fileRef = 05F4C6A94B34E020F753591C /* AppEntry.swift */; };
-		E18D208FA321B2F99E053032 /* Helpers.swift in Sources */ = {isa = PBXBuildFile; fileRef = D5A99A6200EBDCF3E7891D10 /* Helpers.swift */; };
 		FF0BDD8D21B1AF3F2E208681 /* VirtManager in Frameworks */ = {isa = PBXBuildFile; productRef = 9B464BB45DB020D7DB7C2907 /* VirtManager */; };
 /* End PBXBuildFile section */
 
@@ -27,9 +27,9 @@
 		05F4C6A94B34E020F753591C /* AppEntry.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = AppEntry.swift; sourceTree = "<group>"; };
 		6AE8058FA90C8638A219C3B1 /* VirtManagerUITests.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = VirtManagerUITests.swift; sourceTree = "<group>"; };
 		BAB1E75623B1200E08916D4C /* virtmanager */ = {isa = PBXFileReference; lastKnownFileType = folder; name = virtmanager; path = .; sourceTree = SOURCE_ROOT; };
-		D5A99A6200EBDCF3E7891D10 /* Helpers.swift */ = {isa = PBXFileReference; lastKnownFileType = sourcecode.swift; path = Helpers.swift; sourceTree = "<group>"; };
 		DE58F8722E9F008FD21DCA69 /* VirtManagerApp.app */ = {isa = PBXFileReference; explicitFileType = wrapper.application; includeInIndex = 0; path = VirtManagerApp.app; sourceTree = BUILT_PRODUCTS_DIR; };
 		F64F51B80EF736743EB187FB /* VirtManagerUITests.xctest */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = VirtManagerUITests.xctest; sourceTree = BUILT_PRODUCTS_DIR; };
+		FA8B353D1C1DC0C3F3107E6E /* AppIcon.icns */ = {isa = PBXFileReference; lastKnownFileType = image.icns; path = AppIcon.icns; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -73,6 +73,7 @@
 			isa = PBXGroup;
 			children = (
 				44BBA1DF9C9CB8B81F7E93C0 /* Packages */,
+				D32E57D397AE5C8587998741 /* Resources */,
 				77D050ABAB5CD0EF34DAE82C /* UITests */,
 				2284E374043A4CC8A44A50CD /* XcodeSupport */,
 				042D494650897BD634D4DBA8 /* Products */,
@@ -82,11 +83,19 @@
 		77D050ABAB5CD0EF34DAE82C /* UITests */ = {
 			isa = PBXGroup;
 			children = (
-				D5A99A6200EBDCF3E7891D10 /* Helpers.swift */,
 				6AE8058FA90C8638A219C3B1 /* VirtManagerUITests.swift */,
 			);
 			name = UITests;
 			path = Tests/UITests;
+			sourceTree = "<group>";
+		};
+		D32E57D397AE5C8587998741 /* Resources */ = {
+			isa = PBXGroup;
+			children = (
+				FA8B353D1C1DC0C3F3107E6E /* AppIcon.icns */,
+			);
+			name = Resources;
+			path = Sources/VirtManager/Resources;
 			sourceTree = "<group>";
 		};
 /* End PBXGroup section */
@@ -115,6 +124,7 @@
 			buildConfigurationList = 361A18A196C6BCED6D38271F /* Build configuration list for PBXNativeTarget "VirtManagerApp" */;
 			buildPhases = (
 				5D6AAC6E62BE3B980C6A299F /* Sources */,
+				FC88B5A3133F545FC8D3B14F /* Resources */,
 				10934D9BE2F7B42DACD08060 /* Frameworks */,
 			);
 			buildRules = (
@@ -141,6 +151,10 @@
 					899693732925E28E5ECFE77B = {
 						TestTargetID = 978C68D20C357197C71B761A;
 					};
+					978C68D20C357197C71B761A = {
+						DevelopmentTeam = XJQQCN392F;
+						ProvisioningStyle = Manual;
+					};
 				};
 			};
 			buildConfigurationList = 86EB7E61C6BD759848F20826 /* Build configuration list for PBXProject "VirtManager" */;
@@ -166,12 +180,22 @@
 		};
 /* End PBXProject section */
 
+/* Begin PBXResourcesBuildPhase section */
+		FC88B5A3133F545FC8D3B14F /* Resources */ = {
+			isa = PBXResourcesBuildPhase;
+			buildActionMask = 2147483647;
+			files = (
+				3F75A084505017D4BCB72315 /* AppIcon.icns in Resources */,
+			);
+			runOnlyForDeploymentPostprocessing = 0;
+		};
+/* End PBXResourcesBuildPhase section */
+
 /* Begin PBXSourcesBuildPhase section */
 		0628980C8C1CAF87C9C7EF1D /* Sources */ = {
 			isa = PBXSourcesBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
-				E18D208FA321B2F99E053032 /* Helpers.swift in Sources */,
 				65AC1DE804DD67F107AF266C /* VirtManagerUITests.swift in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
@@ -274,7 +298,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Sources/VirtManager/Resources/VirtManager.entitlements;
+				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = XJQQCN392F;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/homebrew/opt/libvirt/include,
@@ -322,7 +349,10 @@
 			buildSettings = {
 				ASSETCATALOG_COMPILER_APPICON_NAME = AppIcon;
 				CODE_SIGN_ENTITLEMENTS = Sources/VirtManager/Resources/VirtManager.entitlements;
+				CODE_SIGN_IDENTITY = "Developer ID Application";
+				CODE_SIGN_STYLE = Manual;
 				COMBINE_HIDPI_IMAGES = YES;
+				DEVELOPMENT_TEAM = XJQQCN392F;
 				HEADER_SEARCH_PATHS = (
 					"$(inherited)",
 					/opt/homebrew/opt/libvirt/include,
