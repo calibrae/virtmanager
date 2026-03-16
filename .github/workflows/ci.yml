@@ -1,0 +1,68 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+    branches: [main]
+
+concurrency:
+  group: ci-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  build-and-test:
+    runs-on: self-hosted
+    timeout-minutes: 15
+
+    env:
+      PATH: /opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+      PKG_CONFIG_PATH: /opt/homebrew/lib/pkgconfig:/opt/homebrew/share/pkgconfig
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Verify dependencies
+        run: |
+          echo "Xcode: $(xcodebuild -version | head -1)"
+          echo "Swift: $(swift --version | head -1)"
+          echo "libvirt: $(pkg-config --modversion libvirt)"
+          echo "spice-gtk: $(pkg-config --modversion spice-client-glib-2.0)"
+          which xcodegen || brew install xcodegen
+
+      - name: Resolve SPM dependencies
+        run: swift package resolve
+
+      - name: Build (SPM)
+        run: swift build
+
+      - name: Unit tests
+        run: swift test --filter VirtManagerCoreTests
+
+      - name: Integration tests (jolyne)
+        run: swift test --filter IntegrationTests
+        continue-on-error: true  # Don't fail CI if jolyne is unreachable
+
+      - name: Generate Xcode project
+        run: xcodegen generate
+
+      - name: Build (Xcode)
+        run: |
+          xcodebuild build \
+            -project VirtManager.xcodeproj \
+            -scheme VirtManagerApp \
+            -destination 'platform=macOS' \
+            -configuration Debug \
+            CODE_SIGNING_REQUIRED=NO \
+            CODE_SIGNING_ALLOWED=NO \
+            -quiet
+
+      - name: UI Tests
+        run: |
+          xcodebuild test \
+            -project VirtManager.xcodeproj \
+            -scheme VirtManagerUITests \
+            -destination 'platform=macOS' \
+            -quiet
+        continue-on-error: true  # UI tests need jolyne connection

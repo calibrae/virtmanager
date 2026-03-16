@@ -10,11 +10,15 @@ final class VirtManagerUITests: XCTestCase {
     override func setUpWithError() throws {
         continueAfterFailure = false
         app = XCUIApplication()
+        // Clear saved connections before each test to avoid accumulation
+        app.launchArguments = ["--reset-connections"]
         app.launch()
     }
 
     override func tearDownWithError() throws {
         app.terminate()
+        // Clean up saved connections from UserDefaults
+        UserDefaults.standard.removeObject(forKey: "com.virtmanager.savedConnections")
     }
 
     // MARK: - Launch Tests

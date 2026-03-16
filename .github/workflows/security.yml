@@ -1,0 +1,83 @@
+name: Security Audit
+
+on:
+  schedule:
+    - cron: '0 8 * * 1'  # Every Monday at 8 AM
+  workflow_dispatch:
+
+jobs:
+  audit:
+    runs-on: self-hosted
+    timeout-minutes: 10
+    env:
+      PATH: /opt/homebrew/bin:/opt/homebrew/sbin:/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin
+      PKG_CONFIG_PATH: /opt/homebrew/lib/pkgconfig:/opt/homebrew/share/pkgconfig
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Check dependency versions
+        run: |
+          echo "=== Dependency Versions ==="
+          echo "libvirt: $(pkg-config --modversion libvirt 2>/dev/null || echo 'NOT FOUND')"
+          echo "spice-gtk: $(pkg-config --modversion spice-client-glib-2.0 2>/dev/null || echo 'NOT FOUND')"
+          echo "libusb: $(pkg-config --modversion libusb-1.0 2>/dev/null || echo 'NOT FOUND')"
+          echo "usbredir: $(pkg-config --modversion libusbredirparser-0.5 2>/dev/null || echo 'NOT FOUND')"
+          echo ""
+          echo "=== Homebrew Outdated ==="
+          brew outdated libvirt spice-gtk libusb usbredir 2>/dev/null || true
+
+      - name: Check for StrictHostKeyChecking=no
+        run: |
+          echo "=== SSH Security ==="
+          if grep -rn "StrictHostKeyChecking=no" Sources/; then
+            echo "FAIL: StrictHostKeyChecking=no found!"
+            exit 1
+          else
+            echo "PASS: No StrictHostKeyChecking=no"
+          fi
+
+      - name: Check for unescaped XML interpolation
+        run: |
+          echo "=== XML Injection Check ==="
+          # Look for XML string interpolation without escapeXML
+          ISSUES=$(grep -rn '\\(<[a-z].*\\\\(\|<.*=.\\\\(' Sources/ \
+            | grep -v escapeXML \
+            | grep -v "// " \
+            | grep -v "test" \
+            | grep -v ".build/" \
+            || true)
+          if [ -n "$ISSUES" ]; then
+            echo "WARNING: Possible unescaped XML interpolation:"
+            echo "$ISSUES"
+          else
+            echo "PASS: No obvious unescaped XML"
+          fi
+
+      - name: Check for print() in production code
+        run: |
+          echo "=== Logging Check ==="
+          PRINTS=$(grep -rn "^\s*print(" Sources/ | grep -v "Tests/" | grep -v ".build/" || true)
+          if [ -n "$PRINTS" ]; then
+            echo "WARNING: print() in production code (use os.Logger):"
+            echo "$PRINTS"
+          else
+            echo "PASS: No print() in production code"
+          fi
+
+      - name: Check for hardcoded credentials
+        run: |
+          echo "=== Credential Check ==="
+          CREDS=$(grep -rni "password\s*=\s*\"[^\"]\+\"\|secret\s*=\s*\"[^\"]\+\"" Sources/ \
+            | grep -v "kSecClass\|kSecAttr\|Keychain\|keychain\|placeholder\|example\|test" \
+            || true)
+          if [ -n "$CREDS" ]; then
+            echo "WARNING: Possible hardcoded credentials:"
+            echo "$CREDS"
+          else
+            echo "PASS: No hardcoded credentials detected"
+          fi
+
+      - name: Build verification
+        run: swift build
