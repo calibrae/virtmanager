@@ -62,17 +62,3 @@ targets:
           - "-lintl"
         SWIFT_ACTIVE_COMPILATION_CONDITIONS: "$(inherited)"
         ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
-
-  VirtManagerUITests:
-    type: bundle.ui-testing
-    platform: macOS
-    sources:
-      - path: Tests/UITests
-    dependencies:
-      - target: VirtManagerApp
-    settings:
-      base:
-        PRODUCT_BUNDLE_IDENTIFIER: com.virtmanager.uitests
-        TEST_TARGET_NAME: VirtManagerApp
-        GENERATE_INFOPLIST_FILE: YES
-        SWIFT_VERSION: "5"

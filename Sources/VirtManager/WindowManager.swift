@@ -232,13 +232,13 @@ public final class WindowManager {
             return
         }
 
-        let view = NetworkManager(connectionID: connectionID)
+        let view = NetworkListView(connectionID: connectionID)
             .environment(appState)
         let hostingView = NSHostingController(rootView: view)
 
         let window = NSWindow(contentViewController: hostingView)
         window.title = "Virtual Networks"
-        window.setContentSize(NSSize(width: 650, height: 450))
+        window.setContentSize(NSSize(width: 850, height: 550))
         window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
         window.minSize = NSSize(width: 450, height: 300)
         window.center()
@@ -254,6 +254,43 @@ public final class WindowManager {
         ) { [weak self] _ in
             Task { @MainActor in
                 self?.networkManagerWindows.removeValue(forKey: connectionID)
+            }
+        }
+    }
+
+    // MARK: - Network Topology
+
+    private var topologyWindows: [UUID: NSWindowController] = [:]
+
+    /// Opens or brings to front a network topology window.
+    func openNetworkTopology(connectionID: UUID, appState: AppState) {
+        if let existing = topologyWindows[connectionID] {
+            existing.window?.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let view = NetworkTopologyView(connectionID: connectionID)
+            .environment(appState)
+        let hostingView = NSHostingController(rootView: view)
+
+        let window = NSWindow(contentViewController: hostingView)
+        window.title = "Network Topology"
+        window.setContentSize(NSSize(width: 900, height: 600))
+        window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+        window.minSize = NSSize(width: 600, height: 400)
+        window.center()
+
+        let controller = NSWindowController(window: window)
+        topologyWindows[connectionID] = controller
+        controller.showWindow(nil)
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.topologyWindows.removeValue(forKey: connectionID)
             }
         }
     }

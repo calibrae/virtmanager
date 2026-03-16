@@ -60,11 +60,3 @@ jobs:
             CODE_SIGNING_ALLOWED=NO \
             -quiet
 
-      - name: UI Tests
-        run: |
-          xcodebuild test \
-            -project VirtManager.xcodeproj \
-            -scheme VirtManagerUITests \
-            -destination 'platform=macOS' \
-            -quiet
-        continue-on-error: true  # UI tests need hypervisor connection

@@ -98,6 +98,9 @@ public struct SidebarView: View {
             Button("Manage Networks...") {
                 WindowManager.shared.openNetworkManager(connectionID: connection.id, appState: appState)
             }
+            Button("Network Topology...") {
+                WindowManager.shared.openNetworkTopology(connectionID: connection.id, appState: appState)
+            }
         } else if state == .connecting || state == .disconnecting {
             // No connect/disconnect actions while transitioning
         } else {
