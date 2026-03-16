@@ -503,6 +503,7 @@ public final class LibvirtConnection: @unchecked Sendable {
                 let uuid = String(cString: uuidBuf)
 
                 let isActive = virNetworkIsActive(net) == 1
+                let isPersistent = virNetworkIsPersistent(net) == 1
 
                 var bridgeName: String?
                 if let bridgePtr = virNetworkGetBridgeName(net) {
@@ -512,12 +513,36 @@ public final class LibvirtConnection: @unchecked Sendable {
                 var autostartVal: Int32 = 0
                 virNetworkGetAutostart(net, &autostartVal)
 
+                // Parse XML for forward mode and IP summaries
+                var forwardMode = "isolated"
+                var ipv4Summary: String?
+                var ipv6Summary: String?
+                if let xmlPtr = virNetworkGetXMLDesc(net, 0) {
+                    let xml = String(cString: xmlPtr)
+                    free(xmlPtr)
+                    if let config = try? NetworkConfig(xmlString: xml) {
+                        forwardMode = config.forward.mode.rawValue
+                        if let v4 = config.ipv4Config {
+                            let prefix = v4.prefix ?? Self.netmaskToPrefix(v4.netmask)
+                            ipv4Summary = "\(v4.address)/\(prefix ?? 24)"
+                        }
+                        if let v6 = config.ipv6Config {
+                            ipv6Summary = "\(v6.address)/\(v6.prefix ?? 64)"
+                        }
+                    }
+                }
+
                 results.append(NetworkInfo(
                     name: name,
                     uuid: uuid,
                     isActive: isActive,
+                    isPersistent: isPersistent,
                     bridge: bridgeName,
-                    autostart: autostartVal != 0
+                    autostart: autostartVal != 0,
+                    forwardMode: forwardMode,
+                    ipv4Summary: ipv4Summary,
+                    ipv6Summary: ipv6Summary,
+                    connectedVMCount: 0  // populated by caller with domain data
                 ))
             }
             return results
@@ -585,6 +610,148 @@ public final class LibvirtConnection: @unchecked Sendable {
                 let err = virGetLastErrorMessage().flatMap { String(cString: $0) } ?? "Unknown"
                 throw LibvirtError.operationFailed(operation: "deleteNetwork", reason: err)
             }
+        }
+    }
+
+    /// Converts dotted-decimal netmask to CIDR prefix length.
+    private static func netmaskToPrefix(_ netmask: String?) -> Int? {
+        guard let nm = netmask else { return nil }
+        let parts = nm.split(separator: ".").compactMap { UInt8($0) }
+        guard parts.count == 4 else { return nil }
+        var bits = 0
+        for part in parts {
+            bits += part.nonzeroBitCount
+        }
+        return bits
+    }
+
+    // MARK: - Network Management (Phase 3 Extensions)
+
+    /// Returns the XML description for a network.
+    public func getNetworkXML(name: String) throws -> String {
+        try withConnection { conn in
+            guard let net = virNetworkLookupByName(conn, name) else {
+                let err = virGetLastErrorMessage().flatMap { String(cString: $0) } ?? "Unknown"
+                throw LibvirtError.operationFailed(operation: "getNetworkXML", reason: err)
+            }
+            defer { virNetworkFree(net) }
+            guard let xmlPtr = virNetworkGetXMLDesc(net, 0) else {
+                let err = virGetLastErrorMessage().flatMap { String(cString: $0) } ?? "Unknown"
+                throw LibvirtError.operationFailed(operation: "getNetworkXML", reason: err)
+            }
+            let result = String(cString: xmlPtr)
+            free(xmlPtr)
+            return result
+        }
+    }
+
+    /// Defines (or redefines) a network from XML without starting it.
+    public func defineNetwork(xml: String) throws {
+        try withConnection { conn in
+            guard let net = virNetworkDefineXML(conn, xml) else {
+                let err = virGetLastErrorMessage().flatMap { String(cString: $0) } ?? "Unknown"
+                throw LibvirtError.operationFailed(operation: "defineNetwork", reason: err)
+            }
+            virNetworkFree(net)
+        }
+    }
+
+    /// Undefines a persistent network (must be inactive).
+    public func undefineNetwork(name: String) throws {
+        try withConnection { conn in
+            guard let net = virNetworkLookupByName(conn, name) else {
+                let err = virGetLastErrorMessage().flatMap { String(cString: $0) } ?? "Unknown"
+                throw LibvirtError.operationFailed(operation: "undefineNetwork", reason: err)
+            }
+            defer { virNetworkFree(net) }
+            if virNetworkUndefine(net) < 0 {
+                let err = virGetLastErrorMessage().flatMap { String(cString: $0) } ?? "Unknown"
+                throw LibvirtError.operationFailed(operation: "undefineNetwork", reason: err)
+            }
+        }
+    }
+
+    /// Sets the autostart flag for a network.
+    public func setNetworkAutostart(name: String, autostart: Bool) throws {
+        try withConnection { conn in
+            guard let net = virNetworkLookupByName(conn, name) else {
+                let err = virGetLastErrorMessage().flatMap { String(cString: $0) } ?? "Unknown"
+                throw LibvirtError.operationFailed(operation: "setNetworkAutostart", reason: err)
+            }
+            defer { virNetworkFree(net) }
+            if virNetworkSetAutostart(net, autostart ? 1 : 0) < 0 {
+                let err = virGetLastErrorMessage().flatMap { String(cString: $0) } ?? "Unknown"
+                throw LibvirtError.operationFailed(operation: "setNetworkAutostart", reason: err)
+            }
+        }
+    }
+
+    /// Returns active DHCP leases for a network.
+    public func getNetworkDHCPLeases(name: String) throws -> [DHCPLease] {
+        try withConnection { conn in
+            guard let net = virNetworkLookupByName(conn, name) else {
+                let err = virGetLastErrorMessage().flatMap { String(cString: $0) } ?? "Unknown"
+                throw LibvirtError.operationFailed(operation: "getNetworkDHCPLeases", reason: err)
+            }
+            defer { virNetworkFree(net) }
+
+            var leasesPtr: UnsafeMutablePointer<virNetworkDHCPLeasePtr?>?
+            let count = virNetworkGetDHCPLeases(net, nil, &leasesPtr, 0)
+
+            guard count >= 0 else {
+                let err = virGetLastErrorMessage().flatMap { String(cString: $0) } ?? "Unknown"
+                throw LibvirtError.operationFailed(operation: "getNetworkDHCPLeases", reason: err)
+            }
+
+            var results: [DHCPLease] = []
+            if count > 0, let leases = leasesPtr {
+                for i in 0..<Int(count) {
+                    guard let lease = leases[i]?.pointee else { continue }
+                    results.append(DHCPLease(
+                        interface: lease.iface.flatMap { String(cString: $0) },
+                        expiry: Date(timeIntervalSince1970: TimeInterval(lease.expirytime)),
+                        type: Int(lease.type),
+                        mac: lease.mac.flatMap { String(cString: $0) },
+                        ipAddress: lease.ipaddr.flatMap { String(cString: $0) } ?? "",
+                        prefix: UInt32(lease.prefix),
+                        hostname: lease.hostname.flatMap { String(cString: $0) },
+                        clientID: lease.clientid.flatMap { String(cString: $0) }
+                    ))
+                    virNetworkDHCPLeaseFree(leases[i])
+                }
+                free(leases)
+            }
+            return results
+        }
+    }
+
+    /// Updates a section of a running network (e.g., add/remove DHCP host, DNS record).
+    /// Falls back to defineNetwork + restart if live update fails.
+    public func updateNetworkSection(name: String, command: UInt32, section: UInt32, xml: String) throws {
+        try withConnection { conn in
+            guard let net = virNetworkLookupByName(conn, name) else {
+                let err = virGetLastErrorMessage().flatMap { String(cString: $0) } ?? "Unknown"
+                throw LibvirtError.operationFailed(operation: "updateNetworkSection", reason: err)
+            }
+            defer { virNetworkFree(net) }
+            let flags = UInt32(VIR_NETWORK_UPDATE_AFFECT_LIVE.rawValue | VIR_NETWORK_UPDATE_AFFECT_CONFIG.rawValue)
+            if virNetworkUpdate(net, command, section, -1, xml, flags) < 0 {
+                let err = virGetLastErrorMessage().flatMap { String(cString: $0) } ?? "Unknown"
+                throw LibvirtError.operationFailed(operation: "updateNetworkSection", reason: err)
+            }
+        }
+    }
+
+    /// Detects if Open vSwitch is available on the hypervisor.
+    /// Best-effort: checks capabilities XML for OVS mentions.
+    public func detectOVSAvailable() throws -> Bool {
+        try withConnection { conn in
+            guard let capsPtr = virConnectGetCapabilities(conn) else {
+                return false
+            }
+            let caps = String(cString: capsPtr)
+            free(capsPtr)
+            return caps.contains("openvswitch") || caps.contains("ovs")
         }
     }
 

@@ -792,6 +792,59 @@ public final class AppState {
         try await runBlocking { try conn.deleteNetwork(name: name) }
     }
 
+    /// Gets the XML definition for a virtual network.
+    public func getNetworkXML(name: String, connectionID: UUID) async throws -> String {
+        guard let conn = libvirtConnections[connectionID] else {
+            throw LibvirtError.notConnected
+        }
+        return try await runBlocking { try conn.getNetworkXML(name: name) }
+    }
+
+    /// Defines (or redefines) a virtual network from XML.
+    public func defineNetwork(xml: String, connectionID: UUID) async throws {
+        guard let conn = libvirtConnections[connectionID] else {
+            throw LibvirtError.notConnected
+        }
+        try await runBlocking { try conn.defineNetwork(xml: xml) }
+    }
+
+    /// Sets the autostart flag for a virtual network.
+    public func setNetworkAutostart(name: String, autostart: Bool, connectionID: UUID) async throws {
+        guard let conn = libvirtConnections[connectionID] else {
+            throw LibvirtError.notConnected
+        }
+        try await runBlocking { try conn.setNetworkAutostart(name: name, autostart: autostart) }
+    }
+
+    /// Gets active DHCP leases for a virtual network.
+    public func getNetworkDHCPLeases(name: String, connectionID: UUID) async throws -> [DHCPLease] {
+        guard let conn = libvirtConnections[connectionID] else {
+            throw LibvirtError.notConnected
+        }
+        return try await runBlocking { try conn.getNetworkDHCPLeases(name: name) }
+    }
+
+    /// Updates a section of a running network live (e.g., DHCP hosts, DNS records).
+    public func updateNetworkSection(name: String, command: UInt32, section: UInt32, xml: String, connectionID: UUID) async throws {
+        guard let conn = libvirtConnections[connectionID] else {
+            throw LibvirtError.notConnected
+        }
+        try await runBlocking { try conn.updateNetworkSection(name: name, command: command, section: section, xml: xml) }
+    }
+
+    /// Detects if Open vSwitch is available on the hypervisor.
+    public func detectOVSAvailable(connectionID: UUID) async throws -> Bool {
+        guard let conn = libvirtConnections[connectionID] else {
+            throw LibvirtError.notConnected
+        }
+        return try await runBlocking { try conn.detectOVSAvailable() }
+    }
+
+    /// Returns VMs for a given connection from the cached VM list.
+    public func vmsForConnection(_ connectionID: UUID) -> [VMInfo] {
+        connectionVMs[connectionID] ?? []
+    }
+
     // MARK: - Storage Pool Lifecycle
 
     /// Starts an inactive storage pool.
