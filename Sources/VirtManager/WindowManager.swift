@@ -1,4 +1,5 @@
 import AppKit
+import SwiftUI
 import LibvirtSwift
 import VirtManagerCore
 
@@ -13,6 +14,15 @@ public final class WindowManager {
 
     /// Tracks open serial console windows by VM ID.
     private var serialWindows: [UUID: NSWindowController] = [:]
+
+    /// Tracks open configuration editor windows by VM ID.
+    private var configWindows: [UUID: NSWindowController] = [:]
+
+    /// Tracks open storage manager windows by connection ID.
+    private var storageManagerWindows: [UUID: NSWindowController] = [:]
+
+    /// Tracks open network manager windows by connection ID.
+    private var networkManagerWindows: [UUID: NSWindowController] = [:]
 
     private init() {}
 
@@ -135,6 +145,129 @@ public final class WindowManager {
         }
     }
 
+    // MARK: - Configuration Editor
+
+    /// Opens or brings to front a configuration editor window for the given VM.
+    func openConfigurationWindow(for vm: VMInfo, connectionID: UUID, appState: AppState? = nil) {
+        if let existing = configWindows[vm.id] {
+            existing.window?.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let configView = VMConfigurationView(vmName: vm.name, connectionID: connectionID)
+        let rootView: AnyView
+        if let appState = appState {
+            rootView = AnyView(configView.environment(appState))
+        } else {
+            rootView = AnyView(configView)
+        }
+        let hostingView = NSHostingController(rootView: rootView)
+
+        // We need the AppState from the environment; use a workaround by
+        // looking it up from the shared app. Since we're @MainActor and the
+        // caller passes through AppState, we embed via the shared window approach.
+        let window = NSWindow(contentViewController: hostingView)
+        window.title = "\(vm.name) — Configuration"
+        window.setContentSize(NSSize(width: 750, height: 550))
+        window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+        window.minSize = NSSize(width: 600, height: 400)
+        window.center()
+
+        let controller = NSWindowController(window: window)
+        configWindows[vm.id] = controller
+        controller.showWindow(nil)
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.configWindowClosed(vmID: vm.id)
+            }
+        }
+    }
+
+    // MARK: - Storage Pool Manager
+
+    /// Opens or brings to front a storage pool manager window for the given connection.
+    func openStorageManager(connectionID: UUID, appState: AppState) {
+        if let existing = storageManagerWindows[connectionID] {
+            existing.window?.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let view = StoragePoolManager(connectionID: connectionID)
+            .environment(appState)
+        let hostingView = NSHostingController(rootView: view)
+
+        let window = NSWindow(contentViewController: hostingView)
+        window.title = "Storage Pools"
+        window.setContentSize(NSSize(width: 700, height: 500))
+        window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+        window.minSize = NSSize(width: 500, height: 350)
+        window.center()
+
+        let controller = NSWindowController(window: window)
+        storageManagerWindows[connectionID] = controller
+        controller.showWindow(nil)
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.storageManagerWindows.removeValue(forKey: connectionID)
+            }
+        }
+    }
+
+    // MARK: - Network Manager
+
+    /// Opens or brings to front a network manager window for the given connection.
+    func openNetworkManager(connectionID: UUID, appState: AppState) {
+        if let existing = networkManagerWindows[connectionID] {
+            existing.window?.makeKeyAndOrderFront(nil)
+            return
+        }
+
+        let view = NetworkManager(connectionID: connectionID)
+            .environment(appState)
+        let hostingView = NSHostingController(rootView: view)
+
+        let window = NSWindow(contentViewController: hostingView)
+        window.title = "Virtual Networks"
+        window.setContentSize(NSSize(width: 650, height: 450))
+        window.styleMask = [.titled, .closable, .miniaturizable, .resizable]
+        window.minSize = NSSize(width: 450, height: 300)
+        window.center()
+
+        let controller = NSWindowController(window: window)
+        networkManagerWindows[connectionID] = controller
+        controller.showWindow(nil)
+
+        NotificationCenter.default.addObserver(
+            forName: NSWindow.willCloseNotification,
+            object: window,
+            queue: .main
+        ) { [weak self] _ in
+            Task { @MainActor in
+                self?.networkManagerWindows.removeValue(forKey: connectionID)
+            }
+        }
+    }
+
+    /// Called when a configuration editor window is closed.
+    func configWindowClosed(vmID: UUID) {
+        configWindows.removeValue(forKey: vmID)
+    }
+
+    /// Returns true if a configuration editor is open for the given VM.
+    func hasOpenConfigWindow(vmID: UUID) -> Bool {
+        configWindows[vmID] != nil
+    }
+
     /// Called when a VNC console window is closed.
     func consoleWindowClosed(vmID: UUID) {
         consoleWindows.removeValue(forKey: vmID)
@@ -156,6 +289,11 @@ public final class WindowManager {
         for (vmID, controller) in serialWindows {
             controller.window?.close()
             serialWindows.removeValue(forKey: vmID)
+        }
+        // Close config windows
+        for (vmID, controller) in configWindows {
+            controller.window?.close()
+            configWindows.removeValue(forKey: vmID)
         }
     }
 
