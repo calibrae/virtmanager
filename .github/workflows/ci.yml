@@ -40,9 +40,11 @@ jobs:
       - name: Unit tests
         run: swift test --filter VirtManagerCoreTests
 
-      - name: Integration tests (jolyne)
+      - name: Integration tests
         run: swift test --filter IntegrationTests
-        continue-on-error: true  # Don't fail CI if jolyne is unreachable
+        env:
+          LIBVIRT_TEST_URI: ${{ secrets.LIBVIRT_TEST_URI }}
+        continue-on-error: true  # Don't fail CI if test hypervisor is unreachable
 
       - name: Generate Xcode project
         run: xcodegen generate
@@ -65,4 +67,4 @@ jobs:
             -scheme VirtManagerUITests \
             -destination 'platform=macOS' \
             -quiet
-        continue-on-error: true  # UI tests need jolyne connection
+        continue-on-error: true  # UI tests need hypervisor connection

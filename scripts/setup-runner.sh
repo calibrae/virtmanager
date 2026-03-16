@@ -22,15 +22,11 @@ echo "libvirt: $(pkg-config --modversion libvirt)"
 echo "spice-gtk: $(pkg-config --modversion spice-client-glib-2.0)"
 echo "xcodegen: $(xcodegen --version 2>/dev/null || echo 'N/A')"
 
-# 4. Check SSH access to jolyne (for integration tests)
+# 4. Check SSH access to test hypervisor (for integration tests)
 echo ""
-echo "Checking SSH to jolyne..."
-if ssh -o ConnectTimeout=5 -o BatchMode=yes jolyne "echo OK" 2>/dev/null; then
-    echo "SSH to jolyne: OK"
-else
-    echo "WARNING: Cannot SSH to jolyne — integration and UI tests will be skipped"
-    echo "Ensure ~/.ssh/config has a 'jolyne' host entry with the correct key"
-fi
+echo "Checking SSH to test hypervisor..."
+echo "Set LIBVIRT_TEST_URI as a GitHub secret (e.g. qemu+ssh://user@host/system)"
+echo "Integration tests will be skipped if the hypervisor is unreachable"
 
 # 5. Download Metal toolchain if needed
 echo ""
