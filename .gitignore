@@ -11,3 +11,5 @@ xcuserdata/
 .claude/
 _bmad/
 _bmad-output/
+default.profraw
+build/
