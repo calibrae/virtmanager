@@ -1,4 +1,6 @@
 import AppKit
+import CoreGraphics
+import SwiftUI
 import VNCClient
 import SpiceClient
 import VirtManagerCore
@@ -16,10 +18,15 @@ final class ConsoleWindowController: NSWindowController, NSWindowDelegate, NSToo
     /// Toolbar item identifiers
     private enum ToolbarItemID {
         static let sendCtrlAltDel = NSToolbarItem.Identifier("sendCtrlAltDel")
+        static let keyboardGrab = NSToolbarItem.Identifier("keyboardGrab")
         static let screenshot = NSToolbarItem.Identifier("screenshot")
         static let fullscreen = NSToolbarItem.Identifier("fullscreen")
         static let disconnect = NSToolbarItem.Identifier("disconnect")
+        static let usbDevices = NSToolbarItem.Identifier("usbDevices")
     }
+
+    private var keyboardGrabItem: NSToolbarItem?
+    private var usbPopover: NSPopover?
 
     init(vm: VMInfo, connectionID: UUID) {
         self.vm = vm
@@ -146,6 +153,9 @@ final class ConsoleWindowController: NSWindowController, NSWindowDelegate, NSToo
         window?.title = "\(vm.name) — SPICE Console"
         window?.subtitle = "Connecting..."
 
+        // Rebuild toolbar now that spiceConnection is set (adds USB button)
+        setupToolbar()
+
         connection.connect(host: host, port: port)
     }
 
@@ -208,6 +218,7 @@ final class ConsoleWindowController: NSWindowController, NSWindowDelegate, NSToo
     }
 
     @objc private func disconnectAction(_ sender: Any?) {
+        KeyboardGrabManager.shared.ungrab()
         vncConsoleView?.detach()
         vncConnection?.disconnect()
         vncConnection = nil
@@ -217,9 +228,115 @@ final class ConsoleWindowController: NSWindowController, NSWindowDelegate, NSToo
         window?.subtitle = "Disconnected"
     }
 
+    @objc private func showUSBDevices(_ sender: Any?) {
+        guard let spiceConnection else { return }
+
+        // If popover is already shown, close it
+        if let popover = usbPopover, popover.isShown {
+            popover.close()
+            usbPopover = nil
+            return
+        }
+
+        let usbView = USBRedirectionView(spiceConnection: spiceConnection)
+        let hostingController = NSHostingController(rootView: usbView)
+
+        let popover = NSPopover()
+        popover.contentViewController = hostingController
+        popover.behavior = .transient
+        popover.contentSize = NSSize(width: 320, height: 300)
+        self.usbPopover = popover
+
+        // Find the toolbar item view to anchor the popover
+        if let toolbarView = findToolbarItemView(identifier: ToolbarItemID.usbDevices) {
+            popover.show(relativeTo: toolbarView.bounds, of: toolbarView, preferredEdge: .minY)
+        } else if let contentView = window?.contentView {
+            popover.show(relativeTo: .zero, of: contentView, preferredEdge: .minY)
+        }
+    }
+
+    /// Finds the view for a toolbar item by identifier.
+    private func findToolbarItemView(identifier: NSToolbarItem.Identifier) -> NSView? {
+        guard let toolbar = window?.toolbar else { return nil }
+        for item in toolbar.items where item.itemIdentifier == identifier {
+            // The toolbar item's view is accessible via the toolbar's internal views
+            if let view = item.value(forKey: "view") as? NSView {
+                return view
+            }
+        }
+        // Fallback: search window's title bar for the button
+        if let titlebarView = window?.standardWindowButton(.closeButton)?.superview?.superview {
+            for subview in titlebarView.subviews {
+                for innerView in subview.subviews {
+                    if let button = innerView as? NSButton,
+                       button.accessibilityLabel() == "USB Devices" {
+                        return button
+                    }
+                }
+            }
+        }
+        return nil
+    }
+
+    @objc private func toggleKeyboardGrab(_ sender: Any?) {
+        let manager = KeyboardGrabManager.shared
+        if manager.isGrabbed {
+            manager.ungrab()
+        } else {
+            setupKeyboardGrab()
+            manager.grab()
+        }
+    }
+
+    /// Configures the keyboard grab manager to forward events to the active console.
+    private func setupKeyboardGrab() {
+        let manager = KeyboardGrabManager.shared
+
+        manager.onGrabStateChanged = { [weak self] grabbed in
+            self?.updateGrabIndicator(grabbed: grabbed)
+        }
+
+        if let vncConn = vncConnection {
+            manager.onKeyEvent = { event in
+                // Convert CGEvent to VNC key event
+                let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+                let isDown = event.type == .keyDown
+                if event.type == .keyDown || event.type == .keyUp {
+                    if let keySym = RFBKeyMapping.keysymForKeyCode(UInt16(keyCode)) {
+                        vncConn.sendKeyEvent(down: isDown, keySym: keySym)
+                    }
+                }
+            }
+        } else if let spiceInput = spiceConnection?.input {
+            manager.onKeyEvent = { event in
+                let keyCode = event.getIntegerValueField(.keyboardEventKeycode)
+                if event.type == .keyDown {
+                    if let scancode = SpiceKeyMapping.scancodeForKeyCode(UInt16(keyCode)) {
+                        spiceInput.keyPress(scancode: scancode)
+                    }
+                } else if event.type == .keyUp {
+                    if let scancode = SpiceKeyMapping.scancodeForKeyCode(UInt16(keyCode)) {
+                        spiceInput.keyRelease(scancode: scancode)
+                    }
+                }
+            }
+        }
+    }
+
+    private func updateGrabIndicator(grabbed: Bool) {
+        if grabbed {
+            keyboardGrabItem?.label = "Keyboard: Captured"
+            keyboardGrabItem?.image = NSImage(systemSymbolName: "keyboard.badge.eye", accessibilityDescription: "Keyboard Captured")
+        } else {
+            keyboardGrabItem?.label = "Keyboard: Free"
+            keyboardGrabItem?.image = NSImage(systemSymbolName: "keyboard.badge.ellipsis", accessibilityDescription: "Keyboard Free")
+        }
+    }
+
     // MARK: - NSWindowDelegate
 
     func windowWillClose(_ notification: Notification) {
+        KeyboardGrabManager.shared.ungrab()
         vncConsoleView?.detach()
         vncConnection?.disconnect()
         vncConnection = nil
@@ -242,6 +359,16 @@ final class ConsoleWindowController: NSWindowController, NSWindowDelegate, NSToo
             item.target = self
             return item
 
+        case ToolbarItemID.keyboardGrab:
+            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+            item.label = "Keyboard: Free"
+            item.toolTip = "Click to grab keyboard (Ctrl+Alt to release)"
+            item.image = NSImage(systemSymbolName: "keyboard.badge.ellipsis", accessibilityDescription: "Keyboard Grab")
+            item.action = #selector(toggleKeyboardGrab(_:))
+            item.target = self
+            keyboardGrabItem = item
+            return item
+
         case ToolbarItemID.screenshot:
             let item = NSToolbarItem(itemIdentifier: itemIdentifier)
             item.label = "Screenshot"
@@ -260,6 +387,15 @@ final class ConsoleWindowController: NSWindowController, NSWindowDelegate, NSToo
             item.target = self
             return item
 
+        case ToolbarItemID.usbDevices:
+            let item = NSToolbarItem(itemIdentifier: itemIdentifier)
+            item.label = "USB Devices"
+            item.toolTip = "Redirect USB devices to VM"
+            item.image = NSImage(systemSymbolName: "cable.connector", accessibilityDescription: "USB Devices")
+            item.action = #selector(showUSBDevices(_:))
+            item.target = self
+            return item
+
         case ToolbarItemID.disconnect:
             let item = NSToolbarItem(itemIdentifier: itemIdentifier)
             item.label = "Disconnect"
@@ -275,16 +411,32 @@ final class ConsoleWindowController: NSWindowController, NSWindowDelegate, NSToo
     }
 
     func toolbarDefaultItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
+        var items: [NSToolbarItem.Identifier] = [
+            ToolbarItemID.sendCtrlAltDel,
+            ToolbarItemID.keyboardGrab,
+        ]
+        // USB redirection is only available for SPICE connections
+        if spiceConnection != nil {
+            items.append(ToolbarItemID.usbDevices)
+        }
+        items.append(contentsOf: [
+            .flexibleSpace,
+            ToolbarItemID.screenshot,
+            ToolbarItemID.fullscreen,
+            ToolbarItemID.disconnect,
+        ])
+        return items
+    }
+
+    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
         [
             ToolbarItemID.sendCtrlAltDel,
+            ToolbarItemID.keyboardGrab,
+            ToolbarItemID.usbDevices,
             .flexibleSpace,
             ToolbarItemID.screenshot,
             ToolbarItemID.fullscreen,
             ToolbarItemID.disconnect,
         ]
-    }
-
-    func toolbarAllowedItemIdentifiers(_ toolbar: NSToolbar) -> [NSToolbarItem.Identifier] {
-        toolbarDefaultItemIdentifiers(toolbar)
     }
 }
