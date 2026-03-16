@@ -63,7 +63,7 @@ let package = Package(
         // Tests
         .testTarget(
             name: "VirtManagerCoreTests",
-            dependencies: ["VirtManagerCore"]
+            dependencies: ["VirtManagerCore", "LibvirtSwift"]
         ),
 
         // Integration tests (require network access to jolyne)
