@@ -1,5 +1,12 @@
 import AppKit
+import CoreGraphics
 import SpiceClient
+
+/// Mouse input mode for the SPICE console.
+enum SpiceMouseMode {
+    case absolute   // Default: map host cursor position directly to guest
+    case relative   // Captured: send deltas, hide host cursor
+}
 
 /// NSView subclass that renders SPICE display output as CGImages
 /// and forwards keyboard/mouse events via the SPICE inputs channel.
@@ -10,6 +17,12 @@ final class SpiceConsoleView: NSView {
 
     /// Whether this view should capture keyboard input.
     var isCapturingInput: Bool = true
+
+    /// Current mouse input mode (absolute or relative).
+    var mouseMode: SpiceMouseMode = .absolute
+
+    /// Whether the mouse is currently grabbed in relative mode.
+    private(set) var isMouseGrabbed: Bool = false
 
     override var acceptsFirstResponder: Bool { true }
     override var canBecomeKeyView: Bool { true }
@@ -27,41 +40,15 @@ final class SpiceConsoleView: NSView {
     private func setupView() {
         wantsLayer = true
         layer?.backgroundColor = NSColor.black.cgColor
-    }
-
-    // MARK: - Public API
-
-    /// Attaches a SPICE connection and begins rendering frames.
-    func attach(connection: SpiceConnection) {
-        self.connection = connection
-
-        connection.onFrameUpdate = { [weak self] image in
-            // Already dispatched to main by SpiceDisplay
-            self?.currentImage = image
-            self?.needsDisplay = true
-        }
-    }
-
-    /// Detaches the current connection.
-    func detach() {
-        connection?.onFrameUpdate = nil
-        connection = nil
-        currentImage = nil
-        needsDisplay = true
+        layer?.isOpaque = true
     }
 
     // MARK: - Drawing
 
     override func draw(_ dirtyRect: NSRect) {
-        guard let context = NSGraphicsContext.current?.cgContext else { return }
+        guard let context = NSGraphicsContext.current?.cgContext,
+              let image = currentImage else { return }
 
-        // Fill background
-        context.setFillColor(NSColor.black.cgColor)
-        context.fill(bounds)
-
-        guard let image = currentImage else { return }
-
-        // Calculate aspect-fit rect
         let imageSize = CGSize(width: image.width, height: image.height)
         let viewSize = bounds.size
         let scale = min(viewSize.width / imageSize.width, viewSize.height / imageSize.height)
@@ -70,10 +57,79 @@ final class SpiceConsoleView: NSView {
             x: (viewSize.width - drawSize.width) / 2,
             y: (viewSize.height - drawSize.height) / 2
         )
-        let drawRect = CGRect(origin: drawOrigin, size: drawSize)
 
-        context.interpolationQuality = .high
-        context.draw(image, in: drawRect)
+        // Fill black bars
+        context.setFillColor(NSColor.black.cgColor)
+        context.fill(bounds)
+
+        // Draw the image — Core Graphics reads directly from the SPICE surface memory
+        context.interpolationQuality = .none
+        context.draw(image, in: CGRect(origin: drawOrigin, size: drawSize))
+    }
+
+    // MARK: - Public API
+
+    /// Attaches a SPICE connection and begins rendering frames.
+    func attach(connection: SpiceConnection) {
+        self.connection = connection
+
+        connection.onFrameUpdate = { [weak self] image, dirtyRect in
+            guard let self else { return }
+            self.currentImage = image
+
+            // Map the SPICE dirty rect to view coordinates and repaint only that region
+            let imageW = CGFloat(image.width)
+            let imageH = CGFloat(image.height)
+            let viewSize = self.bounds.size
+            guard imageW > 0, imageH > 0 else { return }
+
+            let scale = min(viewSize.width / imageW, viewSize.height / imageH)
+            let drawOriginX = (viewSize.width - imageW * scale) / 2
+            let drawOriginY = (viewSize.height - imageH * scale) / 2
+
+            // Convert SPICE coordinates (top-left origin) to NSView (bottom-left origin)
+            let viewX = drawOriginX + CGFloat(dirtyRect.x) * scale
+            let viewY = drawOriginY + (imageH - CGFloat(dirtyRect.y) - CGFloat(dirtyRect.height)) * scale
+            let viewW = CGFloat(dirtyRect.width) * scale
+            let viewH = CGFloat(dirtyRect.height) * scale
+
+            let nsRect = NSRect(x: viewX, y: viewY, width: viewW, height: viewH)
+            self.setNeedsDisplay(nsRect)
+        }
+    }
+
+    /// Detaches the current connection.
+    func detach() {
+        ungrabMouse()
+        connection?.onFrameUpdate = nil
+        connection = nil
+        currentImage = nil
+        needsDisplay = true
+    }
+
+    /// Sets the mouse mode. Call when the SPICE server indicates a mode change.
+    func setMouseMode(_ mode: SpiceMouseMode) {
+        if mouseMode != mode {
+            mouseMode = mode
+            if mode == .absolute && isMouseGrabbed {
+                ungrabMouse()
+            }
+        }
+    }
+
+    /// Grabs the mouse for relative mode: hides cursor and disassociates cursor movement.
+    func grabMouse() {
+        guard !isMouseGrabbed else { return }
+        isMouseGrabbed = true
+        NSCursor.hide()
+        CGEvent(source: nil)?.post(tap: .cghidEventTap) // Ensure events flow
+    }
+
+    /// Releases the mouse grab: shows cursor and restores normal behavior.
+    func ungrabMouse() {
+        guard isMouseGrabbed else { return }
+        isMouseGrabbed = false
+        NSCursor.unhide()
     }
 
     // MARK: - Coordinate Mapping
@@ -189,12 +245,21 @@ final class SpiceConsoleView: NSView {
     private static let spiceMouseButtonMaskRight = 1 << 2
 
     override func mouseDown(with event: NSEvent) {
+        window?.makeFirstResponder(self)
         guard isCapturingInput, let input = connection?.input else {
             super.mouseDown(with: event)
             return
         }
+        if mouseMode == .relative && !isMouseGrabbed {
+            grabMouse()
+        }
         let point = convert(event.locationInWindow, from: nil)
-        if let (x, y) = mapToDisplay(point) {
+        if mouseMode == .relative && isMouseGrabbed {
+            input.mouseButtonPress(
+                button: Self.spiceMouseButtonLeft,
+                maskBit: Self.spiceMouseButtonMaskLeft
+            )
+        } else if let (x, y) = mapToDisplay(point) {
             input.mousePosition(x: x, y: y)
             input.mouseButtonPress(
                 button: Self.spiceMouseButtonLeft,
@@ -208,13 +273,20 @@ final class SpiceConsoleView: NSView {
             super.mouseUp(with: event)
             return
         }
-        let point = convert(event.locationInWindow, from: nil)
-        if let (x, y) = mapToDisplay(point) {
-            input.mousePosition(x: x, y: y)
+        if mouseMode == .relative && isMouseGrabbed {
             input.mouseButtonRelease(
                 button: Self.spiceMouseButtonLeft,
                 maskBit: Self.spiceMouseButtonMaskLeft
             )
+        } else {
+            let point = convert(event.locationInWindow, from: nil)
+            if let (x, y) = mapToDisplay(point) {
+                input.mousePosition(x: x, y: y)
+                input.mouseButtonRelease(
+                    button: Self.spiceMouseButtonLeft,
+                    maskBit: Self.spiceMouseButtonMaskLeft
+                )
+            }
         }
     }
 
@@ -223,13 +295,20 @@ final class SpiceConsoleView: NSView {
             super.rightMouseDown(with: event)
             return
         }
-        let point = convert(event.locationInWindow, from: nil)
-        if let (x, y) = mapToDisplay(point) {
-            input.mousePosition(x: x, y: y)
+        if mouseMode == .relative && isMouseGrabbed {
             input.mouseButtonPress(
                 button: Self.spiceMouseButtonRight,
                 maskBit: Self.spiceMouseButtonMaskRight
             )
+        } else {
+            let point = convert(event.locationInWindow, from: nil)
+            if let (x, y) = mapToDisplay(point) {
+                input.mousePosition(x: x, y: y)
+                input.mouseButtonPress(
+                    button: Self.spiceMouseButtonRight,
+                    maskBit: Self.spiceMouseButtonMaskRight
+                )
+            }
         }
     }
 
@@ -238,13 +317,20 @@ final class SpiceConsoleView: NSView {
             super.rightMouseUp(with: event)
             return
         }
-        let point = convert(event.locationInWindow, from: nil)
-        if let (x, y) = mapToDisplay(point) {
-            input.mousePosition(x: x, y: y)
+        if mouseMode == .relative && isMouseGrabbed {
             input.mouseButtonRelease(
                 button: Self.spiceMouseButtonRight,
                 maskBit: Self.spiceMouseButtonMaskRight
             )
+        } else {
+            let point = convert(event.locationInWindow, from: nil)
+            if let (x, y) = mapToDisplay(point) {
+                input.mousePosition(x: x, y: y)
+                input.mouseButtonRelease(
+                    button: Self.spiceMouseButtonRight,
+                    maskBit: Self.spiceMouseButtonMaskRight
+                )
+            }
         }
     }
 
@@ -253,9 +339,15 @@ final class SpiceConsoleView: NSView {
             super.mouseMoved(with: event)
             return
         }
-        let point = convert(event.locationInWindow, from: nil)
-        if let (x, y) = mapToDisplay(point) {
-            input.mousePosition(x: x, y: y)
+        if mouseMode == .relative && isMouseGrabbed {
+            let dx = Int(event.deltaX)
+            let dy = Int(event.deltaY)
+            input.mouseMotion(dx: dx, dy: dy)
+        } else {
+            let point = convert(event.locationInWindow, from: nil)
+            if let (x, y) = mapToDisplay(point) {
+                input.mousePosition(x: x, y: y)
+            }
         }
     }
 
@@ -264,9 +356,15 @@ final class SpiceConsoleView: NSView {
             super.mouseDragged(with: event)
             return
         }
-        let point = convert(event.locationInWindow, from: nil)
-        if let (x, y) = mapToDisplay(point) {
-            input.mousePosition(x: x, y: y)
+        if mouseMode == .relative && isMouseGrabbed {
+            let dx = Int(event.deltaX)
+            let dy = Int(event.deltaY)
+            input.mouseMotion(dx: dx, dy: dy)
+        } else {
+            let point = convert(event.locationInWindow, from: nil)
+            if let (x, y) = mapToDisplay(point) {
+                input.mousePosition(x: x, y: y)
+            }
         }
     }
 

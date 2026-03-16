@@ -177,6 +177,7 @@ final class VNCConsoleView: NSView {
     }
 
     override func mouseDown(with event: NSEvent) {
+        window?.makeFirstResponder(self)
         guard isCapturingInput else { super.mouseDown(with: event); return }
         sendMouseEvent(event: event, buttonMask: 1)
     }

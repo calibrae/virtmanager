@@ -2,49 +2,64 @@ import Foundation
 import CSpice
 
 /// Handles the SPICE inputs channel: keyboard and mouse input forwarding.
+/// All SPICE calls are dispatched to the GLib thread for thread safety.
 public final class SpiceInput: @unchecked Sendable {
-    private let channel: UnsafeMutableRawPointer // gpointer to SpiceInputsChannel
-
-    /// Tracks which mouse buttons are currently pressed (as a bitmask).
+    private let channel: UnsafeMutableRawPointer
+    private let glibBridge: GLibBridge
     private var buttonState: gint = 0
 
-    init(channel: UnsafeMutableRawPointer) {
+    init(channel: UnsafeMutableRawPointer, glibBridge: GLibBridge) {
         self.channel = channel
+        self.glibBridge = glibBridge
+        // Explicitly connect the inputs channel
+        spice_channel_connect(channel.assumingMemoryBound(to: SpiceChannel.self))
     }
 
     // MARK: - Keyboard
 
-    /// Sends a key press event with the given PC AT scancode (set 1).
     public func keyPress(scancode: UInt32) {
-        let inputsChannel = cspice_to_inputs_channel(channel)
-        spice_inputs_channel_key_press(inputsChannel, guint(scancode))
+        let ch = channel
+        glibBridge.schedule {
+            spice_inputs_channel_key_press(cspice_to_inputs_channel(ch), guint(scancode))
+        }
     }
 
-    /// Sends a key release event with the given PC AT scancode (set 1).
     public func keyRelease(scancode: UInt32) {
-        let inputsChannel = cspice_to_inputs_channel(channel)
-        spice_inputs_channel_key_release(inputsChannel, guint(scancode))
+        let ch = channel
+        glibBridge.schedule {
+            spice_inputs_channel_key_release(cspice_to_inputs_channel(ch), guint(scancode))
+        }
     }
 
     // MARK: - Mouse
 
-    /// Sends an absolute mouse position event.
     public func mousePosition(x: Int, y: Int, display: Int = 0) {
-        let inputsChannel = cspice_to_inputs_channel(channel)
-        spice_inputs_channel_position(inputsChannel, gint(x), gint(y), gint(display), buttonState)
+        let ch = channel; let bs = buttonState
+        glibBridge.schedule {
+            spice_inputs_channel_position(cspice_to_inputs_channel(ch), gint(x), gint(y), gint(display), bs)
+        }
     }
 
-    /// Sends a mouse button press event.
+    public func mouseMotion(dx: Int, dy: Int) {
+        let ch = channel; let bs = buttonState
+        glibBridge.schedule {
+            spice_inputs_channel_motion(cspice_to_inputs_channel(ch), gint(dx), gint(dy), bs)
+        }
+    }
+
     public func mouseButtonPress(button: Int, maskBit: Int) {
         buttonState |= gint(maskBit)
-        let inputsChannel = cspice_to_inputs_channel(channel)
-        spice_inputs_channel_button_press(inputsChannel, gint(button), buttonState)
+        let ch = channel; let bs = buttonState
+        glibBridge.schedule {
+            spice_inputs_channel_button_press(cspice_to_inputs_channel(ch), gint(button), bs)
+        }
     }
 
-    /// Sends a mouse button release event.
     public func mouseButtonRelease(button: Int, maskBit: Int) {
         buttonState &= ~gint(maskBit)
-        let inputsChannel = cspice_to_inputs_channel(channel)
-        spice_inputs_channel_button_release(inputsChannel, gint(button), buttonState)
+        let ch = channel; let bs = buttonState
+        glibBridge.schedule {
+            spice_inputs_channel_button_release(cspice_to_inputs_channel(ch), gint(button), bs)
+        }
     }
 }
