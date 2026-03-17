@@ -127,7 +127,7 @@ public final class NetworkConfig: @unchecked Sendable {
 
     /// Parse from XML string.
     public init(xmlString: String) throws {
-        self.xmlDoc = try XMLDocument(xmlString: xmlString, options: [.nodePreserveWhitespace])
+        self.xmlDoc = try XMLDocument(xmlString: xmlString, options: [.nodePreserveWhitespace, .nodeLoadExternalEntitiesNever])
         guard let r = xmlDoc.rootElement(), r.name == "network" else {
             throw NetworkConfigError.invalidXML("Root element must be <network>")
         }
@@ -137,7 +137,7 @@ public final class NetworkConfig: @unchecked Sendable {
     /// Create a new empty network config.
     public init(name: String, forwardMode: ForwardMode = .isolated) {
         let xmlStr = "<network><name>\(XMLHelpers.escapeXML(name))</name></network>"
-        self.xmlDoc = try! XMLDocument(xmlString: xmlStr, options: [])
+        self.xmlDoc = try! XMLDocument(xmlString: xmlStr, options: [.nodeLoadExternalEntitiesNever])
         self.root = xmlDoc.rootElement()!
         if forwardMode != .isolated {
             var fwd = ForwardConfig(mode: forwardMode)

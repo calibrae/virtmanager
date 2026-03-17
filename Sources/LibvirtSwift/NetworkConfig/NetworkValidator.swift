@@ -20,14 +20,24 @@ extension ConfigValidator {
 
     // MARK: - Network Name
 
+    nonisolated(unsafe) private static let namePattern = /^[a-zA-Z0-9._-]{1,50}$/
+    nonisolated(unsafe) private static let devicePattern = /^[a-zA-Z0-9._-]{1,15}$/
+
     private static func validateNetworkName(_ config: NetworkConfig) -> [ValidationIssue] {
         var issues = [ValidationIssue]()
 
-        if config.name.trimmingCharacters(in: .whitespaces).isEmpty {
+        let name = config.name.trimmingCharacters(in: .whitespaces)
+        if name.isEmpty {
             issues.append(ValidationIssue(
                 severity: .error,
                 field: "name",
                 message: "Network name must not be empty"
+            ))
+        } else if name.wholeMatch(of: namePattern) == nil {
+            issues.append(ValidationIssue(
+                severity: .error,
+                field: "name",
+                message: "Network name must be 1-50 characters: letters, digits, hyphens, underscores, dots"
             ))
         }
 
@@ -40,26 +50,39 @@ extension ConfigValidator {
         var issues = [ValidationIssue]()
         let forward = config.forward
 
-        // Bridge mode: bridge name required
+        // Bridge mode: bridge name required and format-checked
         if forward.mode.requiresBridgeName {
-            if forward.bridgeName == nil || forward.bridgeName!.trimmingCharacters(in: .whitespaces).isEmpty {
+            let bn = forward.bridgeName?.trimmingCharacters(in: .whitespaces) ?? ""
+            if bn.isEmpty {
                 issues.append(ValidationIssue(
                     severity: .error,
                     field: "forward.bridgeName",
                     message: "Bridge mode requires a bridge device name"
                 ))
+            } else if bn.wholeMatch(of: devicePattern) == nil {
+                issues.append(ValidationIssue(
+                    severity: .error,
+                    field: "forward.bridgeName",
+                    message: "Bridge name must be 1-15 characters: letters, digits, hyphens, underscores, dots"
+                ))
             }
         }
 
-        // Macvtap modes: physical device required
+        // Macvtap modes: physical device required and format-checked
         if forward.mode.requiresPhysicalDevice {
-            let hasDev = forward.dev != nil && !forward.dev!.trimmingCharacters(in: .whitespaces).isEmpty
+            let dev = forward.dev?.trimmingCharacters(in: .whitespaces) ?? ""
             let hasInterfaces = !forward.interfaces.isEmpty
-            if !hasDev && !hasInterfaces {
+            if dev.isEmpty && !hasInterfaces {
                 issues.append(ValidationIssue(
                     severity: .error,
                     field: "forward.dev",
                     message: "\(forward.mode.rawValue) mode requires a physical device or interface list"
+                ))
+            } else if !dev.isEmpty, dev.wholeMatch(of: devicePattern) == nil {
+                issues.append(ValidationIssue(
+                    severity: .error,
+                    field: "forward.dev",
+                    message: "Device name must be 1-15 characters: letters, digits, hyphens, underscores, dots"
                 ))
             }
         }
