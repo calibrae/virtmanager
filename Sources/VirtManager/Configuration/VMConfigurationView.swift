@@ -85,38 +85,50 @@ public struct VMConfigurationView: View {
             validationBanner
         }
 
-        // Tab view
-        TabView(selection: $selectedTab) {
-            OverviewTab(config: configBinding)
-                .tabItem { Label("Overview", systemImage: "info.circle") }
-                .tag(0)
-            CPUTab(config: configBinding)
-                .tabItem { Label("CPU", systemImage: "cpu") }
-                .tag(1)
-            MemoryTab(config: configBinding)
-                .tabItem { Label("Memory", systemImage: "memorychip") }
-                .tag(2)
-            BootTab(config: configBinding)
-                .tabItem { Label("Boot", systemImage: "power") }
-                .tag(3)
-            DisksTab(config: configBinding)
-                .tabItem { Label("Disks", systemImage: "internaldrive") }
-                .tag(4)
-            NetworkTab(config: configBinding, connectionID: connectionID)
-                .tabItem { Label("Network", systemImage: "network") }
-                .tag(5)
-            GraphicsOtherTab(config: configBinding)
-                .tabItem { Label("Graphics & Other", systemImage: "display") }
-                .tag(6)
-            XMLEditorTab(xmlText: $xmlText)
-                .tabItem { Label("XML", systemImage: "chevron.left.forwardslash.chevron.right") }
-                .tag(7)
+        // Sidebar + content layout (virt-manager style)
+        NavigationSplitView {
+            List(selection: $selectedTab) {
+                Section("General") {
+                    sidebarItem(tag: 0, icon: "info.circle", label: "Overview")
+                    sidebarItem(tag: 1, icon: "cpu", label: "CPU")
+                    sidebarItem(tag: 2, icon: "memorychip", label: "Memory")
+                    sidebarItem(tag: 3, icon: "power", label: "Boot")
+                }
+                Section("Devices") {
+                    sidebarItem(tag: 4, icon: "internaldrive", label: "Disks")
+                    sidebarItem(tag: 5, icon: "network", label: "Network")
+                    sidebarItem(tag: 6, icon: "display", label: "Graphics & Other")
+                }
+                Section("Passthrough") {
+                    sidebarItem(tag: 7, icon: "cable.connector", label: "USB")
+                    sidebarItem(tag: 8, icon: "square.grid.3x3.topleft.filled", label: "PCIe")
+                }
+                Section {
+                    sidebarItem(tag: 9, icon: "chevron.left.forwardslash.chevron.right", label: "XML")
+                }
+            }
+            .listStyle(.sidebar)
+            .navigationSplitViewColumnWidth(min: 160, ideal: 180, max: 220)
+        } detail: {
+            switch selectedTab {
+            case 0: OverviewTab(config: configBinding)
+            case 1: CPUTab(config: configBinding)
+            case 2: MemoryTab(config: configBinding)
+            case 3: BootTab(config: configBinding)
+            case 4: DisksTab(config: configBinding)
+            case 5: NetworkTab(config: configBinding, connectionID: connectionID)
+            case 6: GraphicsOtherTab(config: configBinding)
+            case 7: USBPassthroughTab(config: configBinding)
+            case 8: PCIePassthroughTab(config: configBinding)
+            case 9: XMLEditorTab(xmlText: $xmlText)
+            default: Text("Select a category")
+            }
         }
         .onChange(of: selectedTab) { oldVal, newVal in
-            if newVal == 7 {
+            if newVal == 9 {
                 // Switching to XML tab: serialize current config
                 syncConfigToXML()
-            } else if oldVal == 7 {
+            } else if oldVal == 9 {
                 // Leaving XML tab: parse XML back to config
                 syncXMLToConfig()
             }
@@ -126,8 +138,14 @@ public struct VMConfigurationView: View {
         .onChange(of: config?.memoryKiB) { _, _ in markChanged() }
         .onChange(of: config?.cpuMode) { _, _ in markChanged() }
         .onChange(of: xmlText) { _, _ in
-            if selectedTab == 7 { hasChanges = true }
+            if selectedTab == 9 { hasChanges = true }
         }
+    }
+
+    @ViewBuilder
+    private func sidebarItem(tag: Int, icon: String, label: String) -> some View {
+        Label(label, systemImage: icon)
+            .tag(tag)
     }
 
     private var validationBanner: some View {
@@ -218,7 +236,7 @@ public struct VMConfigurationView: View {
         Task {
             do {
                 let xmlToApply: String
-                if selectedTab == 7 {
+                if selectedTab == 9 {
                     // On XML tab, use the raw XML text
                     xmlToApply = xmlText
                 } else {

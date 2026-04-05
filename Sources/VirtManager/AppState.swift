@@ -165,35 +165,95 @@ public final class AppState {
     // MARK: - SSH Host Key Verification
 
     /// Checks whether the given hostname exists in ~/.ssh/known_hosts using ssh-keygen -F.
+    /// Also resolves the hostname to IP and checks that, since known_hosts often stores IPs.
     private static func checkHostKey(hostname: String) async -> HostKeyStatus {
         await withCheckedContinuation { continuation in
             DispatchQueue.global(qos: .userInitiated).async {
-                let process = Process()
-                process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh-keygen")
-                process.arguments = ["-F", hostname]
-
-                let pipe = Pipe()
-                process.standardOutput = pipe
-                process.standardError = Pipe()
-
-                do {
-                    try process.run()
-                    process.waitUntilExit()
-
-                    let data = pipe.fileHandleForReading.readDataToEndOfFile()
-                    let output = String(data: data, encoding: .utf8) ?? ""
-
-                    if process.terminationStatus == 0 && !output.isEmpty {
-                        continuation.resume(returning: .known)
-                    } else {
-                        continuation.resume(returning: .unknown)
-                    }
-                } catch {
-                    // If ssh-keygen fails, assume unknown (best-effort)
-                    continuation.resume(returning: .unknown)
+                // Check the hostname as-is first
+                if sshKeygenFind(hostname) {
+                    continuation.resume(returning: .known)
+                    return
                 }
+
+                // Resolve hostname to IP and check that too
+                if let resolved = resolveHostname(hostname), resolved != hostname {
+                    if sshKeygenFind(resolved) {
+                        continuation.resume(returning: .known)
+                        return
+                    }
+                }
+
+                // Also try resolving via ssh config (Host aliases)
+                if let configHost = resolveSSHConfigHostname(hostname), configHost != hostname {
+                    if sshKeygenFind(configHost) {
+                        continuation.resume(returning: .known)
+                        return
+                    }
+                }
+
+                continuation.resume(returning: .unknown)
             }
         }
+    }
+
+    /// Runs `ssh-keygen -F <host>` and returns true if found.
+    private static func sshKeygenFind(_ host: String) -> Bool {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh-keygen")
+        process.arguments = ["-F", host]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = Pipe()
+        do {
+            try process.run()
+            process.waitUntilExit()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8) ?? ""
+            return process.terminationStatus == 0 && !output.isEmpty
+        } catch {
+            return false
+        }
+    }
+
+    /// Resolves a hostname to its IP address via getaddrinfo (thread-safe).
+    private static func resolveHostname(_ hostname: String) -> String? {
+        var hints = addrinfo()
+        hints.ai_family = AF_UNSPEC
+        hints.ai_socktype = SOCK_STREAM
+        var result: UnsafeMutablePointer<addrinfo>?
+        guard getaddrinfo(hostname, nil, &hints, &result) == 0, let res = result else {
+            return nil
+        }
+        defer { freeaddrinfo(res) }
+        var buf = [CChar](repeating: 0, count: Int(NI_MAXHOST))
+        if getnameinfo(res.pointee.ai_addr, res.pointee.ai_addrlen, &buf, socklen_t(buf.count), nil, 0, NI_NUMERICHOST) == 0 {
+            return String(cString: buf)
+        }
+        return nil
+    }
+
+    /// Resolves an SSH config Host alias to its Hostname via `ssh -G`.
+    private static func resolveSSHConfigHostname(_ alias: String) -> String? {
+        let process = Process()
+        process.executableURL = URL(fileURLWithPath: "/usr/bin/ssh")
+        process.arguments = ["-G", alias]
+        let pipe = Pipe()
+        process.standardOutput = pipe
+        process.standardError = Pipe()
+        do {
+            try process.run()
+            process.waitUntilExit()
+            let data = pipe.fileHandleForReading.readDataToEndOfFile()
+            let output = String(data: data, encoding: .utf8) ?? ""
+            // ssh -G outputs "hostname <resolved>" among other lines
+            for line in output.components(separatedBy: "\n") {
+                if line.hasPrefix("hostname ") {
+                    let resolved = String(line.dropFirst("hostname ".count)).trimmingCharacters(in: .whitespaces)
+                    if !resolved.isEmpty { return resolved }
+                }
+            }
+        } catch {}
+        return nil
     }
 
     /// Shows a host key verification alert and returns whether the user chose to connect.

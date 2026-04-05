@@ -37,6 +37,7 @@ public final class DomainConfig: @unchecked Sendable {
     public var soundDevices: [SoundDevice]
     public var controllers: [ControllerDevice]
     public var serialPorts: [SerialDevice]
+    public var hostDevices: [HostDevice]
 
     /// The raw XMLDocument, kept for round-trip fidelity.
     public let xmlDocument: XMLDocument
@@ -104,6 +105,7 @@ public final class DomainConfig: @unchecked Sendable {
         self.soundDevices = devicesEl?.elements(forName: "sound").map { SoundDevice(from: $0) } ?? []
         self.controllers = devicesEl?.elements(forName: "controller").map { ControllerDevice(from: $0) } ?? []
         self.serialPorts = devicesEl?.elements(forName: "serial").map { SerialDevice(from: $0) } ?? []
+        self.hostDevices = devicesEl?.elements(forName: "hostdev").map { HostDevice(from: $0) } ?? []
     }
 
     // MARK: - XML Generation (round-trip)
@@ -255,6 +257,7 @@ public final class DomainConfig: @unchecked Sendable {
         replaceDeviceElements(in: devicesEl!, named: "sound", with: soundDevices.map { $0.toXML() })
         replaceDeviceElements(in: devicesEl!, named: "controller", with: controllers.map { $0.toXML() })
         replaceDeviceElements(in: devicesEl!, named: "serial", with: serialPorts.map { $0.toXML() })
+        replaceDeviceElements(in: devicesEl!, named: "hostdev", with: hostDevices.map { $0.toXML() })
     }
 
     private func replaceDeviceElements(in parent: XMLElement, named name: String, with xmlStrings: [String]) {
