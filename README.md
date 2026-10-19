@@ -1,3 +1,5 @@
+⚠️ DEPRECATED, this project won't be updated. Replaced by a cross platform RUST/Tauri build ![kraftwerk](https://github.com/calibrae/kraftwerk)
+
 # VirtManager for macOS
 
 A native macOS application for managing remote virtual machines via [libvirt](https://libvirt.org/). Connect to KVM/QEMU hypervisors over SSH, manage VMs, configure networks, and get full graphical and serial console access — all from a single app.
